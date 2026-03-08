@@ -1,0 +1,11 @@
+# Sauvegarde cree au runtime par 01_backup.ps1
+src/1 - Automatique/backup/
+
+# Instructions internes Claude Code
+CLAUDE.md
+
+# Logs locaux
+*.log
+
+# Fichiers internes Claude Code
+.claude/
