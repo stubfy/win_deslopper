@@ -20,7 +20,13 @@ try {
 # Export etat des services (pour restauration precise)
 $services = @(
     'SysMain','DPS','Spooler','TabletInputService','RmSvc',
-    'DiagTrack','dmwappushservice','WSearch','DoSvc','WerSvc'
+    'DiagTrack','dmwappushservice','WSearch','DoSvc','WerSvc',
+    'PhoneSvc','SCardSvr','ScDeviceEnum','SEMgrSvc','WpcMonSvc',
+    'lfsvc','MapsBroker','RemoteRegistry','SharedAccess',
+    # Services ajoutes (source : Chris Titus WinUtil)
+    'CDPSvc','InventorySvc','PcaSvc','StorSvc','UsoSvc',
+    'WpnService','camsvc','edgeupdate','edgeupdatem','BITS',
+    'AssignedAccessManagerSvc','WSAIFabricSvc'
 )
 $serviceState = @{}
 foreach ($svc in $services) {
@@ -46,5 +52,11 @@ foreach ($name in $regExports.Keys) {
     reg export $regExports[$name] $outFile /y 2>$null | Out-Null
 }
 Write-Host "    Cles registre exportees -> backup\"
+
+# Activer la sauvegarde automatique quotidienne du registre (00:30, 2 copies)
+$cmPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Configuration Manager'
+Set-ItemProperty -Path $cmPath -Name 'EnablePeriodicBackup' -Value 1 -Type DWord -Force
+Set-ItemProperty -Path $cmPath -Name 'BackupCount'          -Value 2 -Type DWord -Force
+Write-Host "    Sauvegarde automatique quotidienne du registre activee (2 copies)"
 
 Write-Host "    Sauvegarde complete : $BACKUP_DIR"

@@ -16,7 +16,7 @@
 $ErrorActionPreference = 'Continue'
 $ROOT         = Split-Path (Split-Path $MyInvocation.MyCommand.Path)
 $SCRIPTS      = Join-Path $ROOT "scripts"
-$PACK_VERSION = 'v0.1'
+$PACK_VERSION = 'v0.2'
 $LOG_DIR      = Join-Path $env:APPDATA 'win_deslopper\logs'
 $LOG_FILE     = Join-Path $LOG_DIR "win_deslopper.log"
 
@@ -60,7 +60,7 @@ function Invoke-Script {
 
 # ── En-tete ───────────────────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "  win_deslopper v0.1" -ForegroundColor Cyan
+Write-Host "  win_deslopper v0.2" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  by stubfy" -ForegroundColor DarkGray
 Write-Host ""
@@ -145,6 +145,9 @@ Invoke-Script "$SCRIPTS\12_ai_disable.ps1"
 
 Write-Step "PHASE B.12 - Taches planifiees telemetrie + PS7 + Brave"
 Invoke-Script "$SCRIPTS\13_telemetry_tasks.ps1"
+
+Write-Step "PHASE B.13 - Tweaks reseau complementaires (Teredo)"
+Invoke-Script "$SCRIPTS\14_network_tweaks.ps1"
 
 # ── OPTIONS : desinstallations physiques ─────────────────────────────────────
 if ($uninstallEdge) {

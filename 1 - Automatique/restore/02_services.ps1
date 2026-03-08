@@ -25,6 +25,19 @@ $defaults = [ordered]@{
     'RetailDemo'         = 'Disabled'
     'RemoteRegistry'     = 'Disabled'
     'SharedAccess'       = 'Disabled'
+    # Services ajoutes (source : Chris Titus WinUtil) - valeurs par defaut Windows
+    'CDPSvc'                   = 'Automatic'
+    'InventorySvc'             = 'Automatic'
+    'PcaSvc'                   = 'Automatic'
+    'StorSvc'                  = 'Automatic'
+    'UsoSvc'                   = 'Automatic'
+    'WpnService'               = 'Automatic'
+    'camsvc'                   = 'Automatic'
+    'edgeupdate'               = 'Automatic'
+    'edgeupdatem'              = 'Manual'
+    'BITS'                     = 'Automatic'
+    'AssignedAccessManagerSvc' = 'Manual'
+    'WSAIFabricSvc'            = 'Automatic'
 }
 
 # Charger l'etat sauvegarde si disponible

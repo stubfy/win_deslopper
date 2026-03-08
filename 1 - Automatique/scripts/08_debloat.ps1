@@ -30,6 +30,9 @@ $appsToRemove = @(
     'Microsoft.PowerAutomateDesktop'
     'Microsoft.Copilot'
     'Microsoft.OutlookForWindows'
+    # Widgets (desactives par registre dans 02_registry, paquets supprimes ici)
+    'MicrosoftWindows.Client.WebExperience'
+    'Microsoft.WidgetsPlatformRuntime'
 )
 
 $removed = 0

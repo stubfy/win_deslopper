@@ -177,3 +177,19 @@ Windows Registry Editor Version 5.00
 "01"=-
 "04"=-
 "08"=-
+
+; --- Restaurer Multiplane Overlay (MPO) ---
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Dwm]
+"OverlayTestMode"=-
+
+; --- Restaurer WPBT ---
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager]
+"DisableWpbt"=-
+
+; --- Restaurer BSoD par defaut ---
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\CrashControl]
+"DisplayParameters"=-
+
+; --- Restaurer NumLock par defaut (0 = off) ---
+[HKEY_CURRENT_USER\Control Panel\Keyboard]
+"InitialKeyboardIndicators"="0"

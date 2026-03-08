@@ -192,3 +192,19 @@ Windows Registry Editor Version 5.00
 "01"=dword:00000001
 "04"=dword:00000001
 "08"=dword:00000001
+
+; --- Desactiver Multiplane Overlay (MPO) - reduit stutters/flickering GPU ---
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Dwm]
+"OverlayTestMode"=dword:00000005
+
+; --- Desactiver WPBT (injection logiciel constructeur via firmware UEFI) ---
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager]
+"DisableWpbt"=dword:00000001
+
+; --- BSoD detaille (plus d'informations en cas de crash) ---
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\CrashControl]
+"DisplayParameters"=dword:00000001
+
+; --- NumLock active au demarrage ---
+[HKEY_CURRENT_USER\Control Panel\Keyboard]
+"InitialKeyboardIndicators"="2"

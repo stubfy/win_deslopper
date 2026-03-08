@@ -33,3 +33,39 @@ foreach ($svc in $services.Keys) {
         Write-Host "    [ABSENT]    $svc" -ForegroundColor Gray
     }
 }
+
+# --- Services passes en Manuel (demarrent a la demande, pas au boot) ---
+# Source : Chris Titus WinUtil - services non couverts par le pack
+$servicesManual = [ordered]@{
+    'CDPSvc'       = 'Connected Devices Platform - synchronisation entre appareils'
+    'InventorySvc' = 'Inventory and Compatibility Appraisal - telemetrie materielle'
+    'PcaSvc'       = 'Program Compatibility Assistant - detection problemes compat'
+    'StorSvc'      = 'Storage Service - Storage Sense (demarre a la demande si besoin)'
+    'UsoSvc'       = 'Update Session Orchestrator - updates automatiques en arriere-plan'
+    'WpnService'   = 'Windows Push Notifications - toasts et interruptions'
+    'camsvc'       = 'Capability Access Manager - acces apps UWP camera/micro'
+    'edgeupdate'   = 'Microsoft Edge Update - MAJ automatiques Edge'
+    'edgeupdatem'  = 'Microsoft Edge Update (tache planifiee)'
+    'BITS'         = 'Background Intelligent Transfer - transferts arriere-plan'
+    'WSAIFabricSvc'= 'Windows AI Fabric - runtime IA (Recall, Copilot runtime)'
+}
+
+foreach ($svc in $servicesManual.Keys) {
+    $s = Get-Service $svc -ErrorAction SilentlyContinue
+    if ($s) {
+        Set-Service $svc -StartupType Manual -ErrorAction SilentlyContinue
+        Write-Host "    [MANUEL]    $svc"
+    } else {
+        Write-Host "    [ABSENT]    $svc" -ForegroundColor Gray
+    }
+}
+
+# --- Kiosk mode (inutile sur PC gaming) ---
+$s = Get-Service 'AssignedAccessManagerSvc' -ErrorAction SilentlyContinue
+if ($s) {
+    Stop-Service 'AssignedAccessManagerSvc' -Force -ErrorAction SilentlyContinue
+    Set-Service  'AssignedAccessManagerSvc' -StartupType Disabled -ErrorAction SilentlyContinue
+    Write-Host "    [DESACTIVE] AssignedAccessManagerSvc"
+} else {
+    Write-Host "    [ABSENT]    AssignedAccessManagerSvc" -ForegroundColor Gray
+}
