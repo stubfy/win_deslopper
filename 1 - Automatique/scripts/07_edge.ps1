@@ -1,4 +1,4 @@
-# 07_edge.ps1 - Applique les politiques pour desactiver les comportements intrusifs de Edge
+# 07_edge.ps1 - Apply policies to disable intrusive Edge behaviors
 
 $edgePolicies = @{
     'AllowPrelaunch'              = 0
@@ -25,11 +25,11 @@ if (-not (Test-Path $edgePath)) { New-Item -Path $edgePath -Force | Out-Null }
 foreach ($name in $edgePolicies.Keys) {
     Set-ItemProperty -Path $edgePath -Name $name -Value $edgePolicies[$name] -Type DWord -ErrorAction SilentlyContinue
 }
-Write-Host "    Politiques Edge appliquees ($($edgePolicies.Count) parametres)"
+Write-Host "    Edge policies applied ($($edgePolicies.Count) settings)"
 
-# Desactiver les mises a jour automatiques Edge
+# Disable automatic Edge updates
 $edgeUpdatePath = 'HKLM:\SOFTWARE\Microsoft\EdgeUpdate'
 if (-not (Test-Path $edgeUpdatePath)) { New-Item -Path $edgeUpdatePath -Force | Out-Null }
 Set-ItemProperty -Path $edgeUpdatePath -Name 'AutoUpdateCheckPeriodMinutes' -Value 0  -Type DWord -ErrorAction SilentlyContinue
 Set-ItemProperty -Path $edgeUpdatePath -Name 'DisableAutoUpdateChecks'       -Value 1  -Type DWord -ErrorAction SilentlyContinue
-Write-Host "    Mises a jour automatiques Edge desactivees"
+Write-Host "    Automatic Edge updates disabled"

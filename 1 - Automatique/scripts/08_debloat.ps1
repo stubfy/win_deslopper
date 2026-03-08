@@ -1,4 +1,4 @@
-# 08_debloat.ps1 - Supprime les applications UWP bloatware de Windows 11 25H2
+# 08_debloat.ps1 - Remove bloatware UWP apps from Windows 11 25H2
 
 $appsToRemove = @(
     # Xbox / Gaming
@@ -8,7 +8,7 @@ $appsToRemove = @(
     'Microsoft.Xbox.TCUI'
     'Microsoft.XboxIdentityProvider'
     'Microsoft.GamingApp'
-    # Bloatware Microsoft
+    # Microsoft bloatware
     'Microsoft.Getstarted'
     'Microsoft.WindowsFeedbackHub'
     'Microsoft.GetHelp'
@@ -23,14 +23,14 @@ $appsToRemove = @(
     'Microsoft.Todos'
     'Microsoft.WindowsMaps'
     'Microsoft.ZuneMusic'               # Groove Music / Media Player legacy
-    'Microsoft.ZuneVideo'               # Films et TV legacy
+    'Microsoft.ZuneVideo'               # Movies & TV legacy
     'Microsoft.YourPhone'               # Phone Link
     'Microsoft.Phone'
     'Clipchamp.Clipchamp'
     'Microsoft.PowerAutomateDesktop'
     'Microsoft.Copilot'
     'Microsoft.OutlookForWindows'
-    # Widgets (desactives par registre dans 02_registry, paquets supprimes ici)
+    # Widgets (disabled via registry in 02_registry, packages removed here)
     'MicrosoftWindows.Client.WebExperience'
     'Microsoft.WidgetsPlatformRuntime'
 )
@@ -44,14 +44,14 @@ foreach ($appName in $appsToRemove) {
         try {
             Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction Stop
             $removed++
-            Write-Host "    [SUPPRIME] $appName"
+            Write-Host "    [REMOVED] $appName"
         } catch {
             $errors++
-            Write-Host "    [ERREUR]   $appName - $_" -ForegroundColor Yellow
+            Write-Host "    [ERROR]   $appName - $_" -ForegroundColor Yellow
         }
     }
 
-    # Supprimer aussi le provisioned package pour empecher la reinstallation apres reset
+    # Also remove the provisioned package to prevent reinstallation after reset
     $prov = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue |
             Where-Object { $_.DisplayName -eq $appName }
     if ($prov) {
@@ -59,4 +59,4 @@ foreach ($appName in $appsToRemove) {
     }
 }
 
-Write-Host "    Bilan: $removed supprime(s), $errors erreur(s), $($appsToRemove.Count - $removed - $errors) absent(s)"
+Write-Host "    Summary: $removed removed, $errors error(s), $($appsToRemove.Count - $removed - $errors) not found"

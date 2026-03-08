@@ -1,6 +1,6 @@
-# 13_telemetry_tasks.ps1 - Desactive les taches planifiees de telemetrie + PS7 tele + Brave
+# 13_telemetry_tasks.ps1 - Disable telemetry scheduled tasks + PS7 telemetry + Brave
 
-# --- Taches planifiees de telemetrie Microsoft ---
+# --- Microsoft telemetry scheduled tasks ---
 $tasks = @(
     '\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser'
     '\Microsoft\Windows\Application Experience\ProgramDataUpdater'
@@ -25,17 +25,17 @@ foreach ($task in $tasks) {
         Disable-ScheduledTask -TaskPath (Split-Path $task -Parent) `
                               -TaskName  (Split-Path $task -Leaf) `
                               -ErrorAction SilentlyContinue | Out-Null
-        Write-Host "    [DESACTIVE] $task"
+        Write-Host "    [DISABLED]   $task"
     } else {
-        Write-Host "    [ABSENT]    $task" -ForegroundColor Gray
+        Write-Host "    [NOT FOUND]  $task" -ForegroundColor Gray
     }
 }
 
-# --- Telemetrie PowerShell 7 ---
+# --- PowerShell 7 telemetry ---
 [Environment]::SetEnvironmentVariable('POWERSHELL_TELEMETRY_OPTOUT', '1', 'Machine')
-Write-Host "    [SET] POWERSHELL_TELEMETRY_OPTOUT=1 (variable env Machine)"
+Write-Host "    [SET] POWERSHELL_TELEMETRY_OPTOUT=1 (Machine env variable)"
 
-# --- Brave Browser debloat (conditionnel) ---
+# --- Brave Browser debloat (conditional) ---
 $bravePaths = @(
     'HKLM:\SOFTWARE\Policies\BraveSoftware\Brave'
     'HKLM:\SOFTWARE\Policies\BraveSoftware\Update'
@@ -62,7 +62,7 @@ if ($braveInstalled) {
     Set-ItemProperty -Path $braveUpdate -Name 'AutoUpdateCheckPeriodMinutes' -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $braveUpdate -Name 'DisableAutoUpdateChecks'       -Value 1 -Type DWord -ErrorAction SilentlyContinue
 
-    Write-Host "    [OK] Brave detecte - politiques telemetrie/arriere-plan appliquees"
+    Write-Host "    [OK] Brave detected - telemetry/background policies applied"
 } else {
-    Write-Host "    Brave non detecte - politiques Brave ignorees" -ForegroundColor Gray
+    Write-Host "    Brave not detected - Brave policies skipped" -ForegroundColor Gray
 }

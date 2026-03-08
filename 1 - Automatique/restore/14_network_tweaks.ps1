@@ -1,5 +1,5 @@
-# restore\14_network_tweaks.ps1 - Restaure les tweaks reseau complementaires
+# restore\14_network_tweaks.ps1 - Restore additional network tweaks
 
-# Restaurer Teredo a son etat par defaut Windows
+# Restore Teredo to its Windows default state
 netsh interface teredo set state default 2>&1 | ForEach-Object { Write-Host "    $_" }
-Write-Host "    Teredo restaure (etat par defaut)"
+Write-Host "    Teredo restored (default state)"

@@ -1,26 +1,26 @@
-# 03_services.ps1 - Desactive les services inutiles pour le gaming
+# 03_services.ps1 - Disable unnecessary services for gaming
 
 $services = [ordered]@{
-    'SysMain'            = 'Superfetch - I/O disque constant, inutile sur SSD'
-    'DPS'                = 'Diagnostic Policy Service - diagnostic systeme non necessaire'
-    'Spooler'            = 'Print Spooler - impression (desactiver si pas d imprimante)'
-    'TabletInputService' = 'Clavier tactile et panneau ecriture manuscrite'
+    'SysMain'            = 'Superfetch - constant disk I/O, useless on SSD'
+    'DPS'                = 'Diagnostic Policy Service - unnecessary system diagnostics'
+    'Spooler'            = 'Print Spooler - printing (disable if no printer attached)'
+    'TabletInputService' = 'Touch keyboard and handwriting panel'
     'RmSvc'              = 'Radio Management Service'
-    'DiagTrack'          = 'Telemetrie Connected User Experiences'
-    'dmwappushservice'   = 'Push telemetrie WAP'
-    'WSearch'            = 'Indexeur Windows Search - I/O disque constant en arriere plan'
-    'WerSvc'             = 'Windows Error Reporting - envoi rapports erreurs Microsoft'
-    'DoSvc'              = 'Delivery Optimization - partage P2P des mises a jour'
-    'PhoneSvc'           = 'Service telephonique (Bluetooth calls, inutile en gaming pur)'
-    'SCardSvr'           = 'Smart Card - inutile sans lecteur de carte a puce'
+    'DiagTrack'          = 'Connected User Experiences telemetry'
+    'dmwappushservice'   = 'WAP push telemetry'
+    'WSearch'            = 'Windows Search indexer - constant background disk I/O'
+    'WerSvc'             = 'Windows Error Reporting - sends crash reports to Microsoft'
+    'DoSvc'              = 'Delivery Optimization - P2P update sharing'
+    'PhoneSvc'           = 'Phone service (Bluetooth calls, useless for pure gaming)'
+    'SCardSvr'           = 'Smart Card - useless without a smart card reader'
     'ScDeviceEnum'       = 'Smart Card Device Enumeration Service'
-    'SEMgrSvc'           = 'Paiements NFC / SE Manager'
-    'WpcMonSvc'          = 'Controle parental Windows'
-    'lfsvc'              = 'Service de geolocalisation (GPS/localisation apps)'
-    'MapsBroker'         = 'Gestionnaire des cartes telechargees'
-    'RetailDemo'         = 'Mode demonstration (PC boutique - sans effet si non present)'
-    'RemoteRegistry'     = 'Registre a distance - risque de securite'
-    'SharedAccess'       = 'Partage de connexion Internet (ICS)'
+    'SEMgrSvc'           = 'NFC payments / SE Manager'
+    'WpcMonSvc'          = 'Windows Parental Controls'
+    'lfsvc'              = 'Geolocation service (GPS/location for apps)'
+    'MapsBroker'         = 'Downloaded maps manager'
+    'RetailDemo'         = 'Demo mode (retail PC - no effect if not present)'
+    'RemoteRegistry'     = 'Remote Registry - security risk'
+    'SharedAccess'       = 'Internet Connection Sharing (ICS)'
 }
 
 foreach ($svc in $services.Keys) {
@@ -28,44 +28,44 @@ foreach ($svc in $services.Keys) {
     if ($s) {
         Stop-Service $svc -Force -ErrorAction SilentlyContinue
         Set-Service  $svc -StartupType Disabled -ErrorAction SilentlyContinue
-        Write-Host "    [DESACTIVE] $svc"
+        Write-Host "    [DISABLED]   $svc"
     } else {
-        Write-Host "    [ABSENT]    $svc" -ForegroundColor Gray
+        Write-Host "    [NOT FOUND]  $svc" -ForegroundColor Gray
     }
 }
 
-# --- Services passes en Manuel (demarrent a la demande, pas au boot) ---
-# Source : Chris Titus WinUtil - services non couverts par le pack
+# --- Services set to Manual (start on demand, not at boot) ---
+# Source: Chris Titus WinUtil - services not covered by the pack
 $servicesManual = [ordered]@{
-    'CDPSvc'       = 'Connected Devices Platform - synchronisation entre appareils'
-    'InventorySvc' = 'Inventory and Compatibility Appraisal - telemetrie materielle'
-    'PcaSvc'       = 'Program Compatibility Assistant - detection problemes compat'
-    'StorSvc'      = 'Storage Service - Storage Sense (demarre a la demande si besoin)'
-    'UsoSvc'       = 'Update Session Orchestrator - updates automatiques en arriere-plan'
-    'WpnService'   = 'Windows Push Notifications - toasts et interruptions'
-    'camsvc'       = 'Capability Access Manager - acces apps UWP camera/micro'
-    'edgeupdate'   = 'Microsoft Edge Update - MAJ automatiques Edge'
-    'edgeupdatem'  = 'Microsoft Edge Update (tache planifiee)'
-    'BITS'         = 'Background Intelligent Transfer - transferts arriere-plan'
-    'WSAIFabricSvc'= 'Windows AI Fabric - runtime IA (Recall, Copilot runtime)'
+    'CDPSvc'       = 'Connected Devices Platform - cross-device sync'
+    'InventorySvc' = 'Inventory and Compatibility Appraisal - hardware telemetry'
+    'PcaSvc'       = 'Program Compatibility Assistant - compatibility issue detection'
+    'StorSvc'      = 'Storage Service - Storage Sense (starts on demand if needed)'
+    'UsoSvc'       = 'Update Session Orchestrator - automatic background updates'
+    'WpnService'   = 'Windows Push Notifications - toasts and interruptions'
+    'camsvc'       = 'Capability Access Manager - UWP app access to camera/mic'
+    'edgeupdate'   = 'Microsoft Edge Update - automatic Edge updates'
+    'edgeupdatem'  = 'Microsoft Edge Update (scheduled task)'
+    'BITS'         = 'Background Intelligent Transfer - background transfers'
+    'WSAIFabricSvc'= 'Windows AI Fabric - AI runtime (Recall, Copilot runtime)'
 }
 
 foreach ($svc in $servicesManual.Keys) {
     $s = Get-Service $svc -ErrorAction SilentlyContinue
     if ($s) {
         Set-Service $svc -StartupType Manual -ErrorAction SilentlyContinue
-        Write-Host "    [MANUEL]    $svc"
+        Write-Host "    [MANUAL]     $svc"
     } else {
-        Write-Host "    [ABSENT]    $svc" -ForegroundColor Gray
+        Write-Host "    [NOT FOUND]  $svc" -ForegroundColor Gray
     }
 }
 
-# --- Kiosk mode (inutile sur PC gaming) ---
+# --- Kiosk mode (useless on a gaming PC) ---
 $s = Get-Service 'AssignedAccessManagerSvc' -ErrorAction SilentlyContinue
 if ($s) {
     Stop-Service 'AssignedAccessManagerSvc' -Force -ErrorAction SilentlyContinue
     Set-Service  'AssignedAccessManagerSvc' -StartupType Disabled -ErrorAction SilentlyContinue
-    Write-Host "    [DESACTIVE] AssignedAccessManagerSvc"
+    Write-Host "    [DISABLED]   AssignedAccessManagerSvc"
 } else {
-    Write-Host "    [ABSENT]    AssignedAccessManagerSvc" -ForegroundColor Gray
+    Write-Host "    [NOT FOUND]  AssignedAccessManagerSvc" -ForegroundColor Gray
 }

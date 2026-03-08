@@ -1,5 +1,5 @@
-# 06_dns.ps1 - Configure le DNS Cloudflare sur toutes les interfaces reseau actives
-# Remplace le script bat original (qui echouait sur les Windows non-francais)
+# 06_dns.ps1 - Configure Cloudflare DNS on all active network interfaces
+# Replaces the original bat script (which failed on non-French Windows)
 
 $primaryDNS   = '1.1.1.1'
 $secondaryDNS = '1.0.0.1'
@@ -7,7 +7,7 @@ $secondaryDNS = '1.0.0.1'
 $adapters = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' }
 
 if ($adapters.Count -eq 0) {
-    Write-Host "    Aucune interface reseau active detectee." -ForegroundColor Yellow
+    Write-Host "    No active network interface detected." -ForegroundColor Yellow
     return
 }
 
@@ -17,6 +17,6 @@ foreach ($adapter in $adapters) {
             -ServerAddresses ($primaryDNS, $secondaryDNS) -ErrorAction Stop
         Write-Host "    [OK] $($adapter.Name) -> $primaryDNS / $secondaryDNS"
     } catch {
-        Write-Host "    [ERREUR] $($adapter.Name) : $_" -ForegroundColor Yellow
+        Write-Host "    [ERROR] $($adapter.Name): $_" -ForegroundColor Yellow
     }
 }

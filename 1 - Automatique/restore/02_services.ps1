@@ -1,9 +1,9 @@
-# restore\02_services.ps1 - Remet les services dans leur etat d'origine
+# restore\02_services.ps1 - Restore services to their original state
 
 $BACKUP_DIR = Join-Path (Split-Path $PSScriptRoot) "backup"
 $stateFile  = Join-Path $BACKUP_DIR "services_state.json"
 
-# Valeurs par defaut Windows si pas de sauvegarde
+# Windows default values if no backup available
 $defaults = [ordered]@{
     'SysMain'            = 'Automatic'
     'DPS'                = 'Automatic'
@@ -25,7 +25,7 @@ $defaults = [ordered]@{
     'RetailDemo'         = 'Disabled'
     'RemoteRegistry'     = 'Disabled'
     'SharedAccess'       = 'Disabled'
-    # Services ajoutes (source : Chris Titus WinUtil) - valeurs par defaut Windows
+    # Added services (source: Chris Titus WinUtil) - Windows default values
     'CDPSvc'                   = 'Automatic'
     'InventorySvc'             = 'Automatic'
     'PcaSvc'                   = 'Automatic'
@@ -40,15 +40,15 @@ $defaults = [ordered]@{
     'WSAIFabricSvc'            = 'Automatic'
 }
 
-# Charger l'etat sauvegarde si disponible
+# Load saved state if available
 if (Test-Path $stateFile) {
     $saved = Get-Content $stateFile | ConvertFrom-Json
     foreach ($prop in $saved.PSObject.Properties) {
         $defaults[$prop.Name] = $prop.Value
     }
-    Write-Host "    Etat sauvegarde charge depuis : $stateFile"
+    Write-Host "    Saved state loaded from: $stateFile"
 } else {
-    Write-Host "    Pas de sauvegarde trouvee, utilisation des valeurs par defaut Windows." -ForegroundColor Gray
+    Write-Host "    No backup found, using Windows default values." -ForegroundColor Gray
 }
 
 foreach ($svc in $defaults.Keys) {
@@ -56,8 +56,8 @@ foreach ($svc in $defaults.Keys) {
     if ($s) {
         Set-Service $svc -StartupType $defaults[$svc] -ErrorAction SilentlyContinue
         Start-Service $svc -ErrorAction SilentlyContinue
-        Write-Host "    [RESTAURE] $svc -> $($defaults[$svc])"
+        Write-Host "    [RESTORED]  $svc -> $($defaults[$svc])"
     } else {
-        Write-Host "    [ABSENT]   $svc" -ForegroundColor Gray
+        Write-Host "    [NOT FOUND] $svc" -ForegroundColor Gray
     }
 }

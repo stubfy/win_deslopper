@@ -1,16 +1,16 @@
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-    Opti Pack - Lanceur principal
-    Windows 11 25H2 - Optimisation Gaming / Debloat / QoL
+    win_deslopper - Main launcher
+    Windows 11 25H2 - Gaming optimization / Debloat / QoL
 
 .DESCRIPTION
-    Execute tous les tweaks automatisables dans l'ordre recommande.
-    Cree une sauvegarde avant toute modification.
-    Pour annuler : .\restore_all.ps1
+    Runs all automatable tweaks in the recommended order.
+    Creates a backup before any modification.
+    To undo: .\restore_all.ps1
 
 .NOTES
-    Etapes manuelles post-execution : voir readme.txt a la racine du pack
+    Manual steps after execution: see readme.txt at the pack root
 #>
 
 $ErrorActionPreference = 'Continue'
@@ -39,7 +39,7 @@ function Invoke-Script {
     param([string]$Path)
     $name = Split-Path $Path -Leaf
     Write-Host "    $name ... " -NoNewline
-    Write-Log "Debut : $name" 'RUN'
+    Write-Log "Start: $name" 'RUN'
     try {
         $output = & $Path *>&1
         foreach ($line in $output) {
@@ -50,162 +50,162 @@ function Invoke-Script {
             }
         }
         Write-Host "[OK]" -ForegroundColor Green
-        Write-Log "Fin : $name -> OK" 'OK'
+        Write-Log "End: $name -> OK" 'OK'
     } catch {
-        Write-Host "[ERREUR] $_" -ForegroundColor Red
-        Write-Log "Fin : $name -> ERREUR : $_" 'ERROR'
+        Write-Host "[ERROR] $_" -ForegroundColor Red
+        Write-Log "End: $name -> ERROR: $_" 'ERROR'
         Write-Log "  StackTrace: $($_.ScriptStackTrace)" 'ERROR'
     }
 }
 
-# ── En-tete ───────────────────────────────────────────────────────────────────
+# ── Header ─────────────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "  win_deslopper v0.2" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  by stubfy" -ForegroundColor DarkGray
 Write-Host ""
 
-# ── Init log ──────────────────────────────────────────────────────────────────
+# ── Log init ───────────────────────────────────────────────────────────────────
 Write-Log "============================================================"
 Write-Log "win_deslopper $PACK_VERSION" 'INFO'
-Write-Log "Date    : $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" 'INFO'
-Write-Log "OS      : $([System.Environment]::OSVersion.VersionString)" 'INFO'
-Write-Log "Machine : $env:COMPUTERNAME" 'INFO'
-Write-Log "User    : $([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)" 'INFO'
-Write-Log "Log     : $LOG_FILE" 'INFO'
+Write-Log "Date   : $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" 'INFO'
+Write-Log "OS     : $([System.Environment]::OSVersion.VersionString)" 'INFO'
+Write-Log "Machine: $env:COMPUTERNAME" 'INFO'
+Write-Log "User   : $([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)" 'INFO'
+Write-Log "Log    : $LOG_FILE" 'INFO'
 Write-Log "============================================================"
-Write-Host "  Log : $LOG_FILE" -ForegroundColor DarkGray
+Write-Host "  Log: $LOG_FILE" -ForegroundColor DarkGray
 Write-Host ""
 
-# ── OPTIONS OPTIONNELLES (prompt avant toute modification) ────────────────────
-Write-Host "OPTIONS AVANT LANCEMENT :" -ForegroundColor Magenta
-Write-Host "(Ces operations sont irreversibles sans reinstallation manuelle)" -ForegroundColor DarkGray
+# ── OPTIONAL OPTIONS (prompt before any modification) ─────────────────────────
+Write-Host "OPTIONS BEFORE LAUNCH:" -ForegroundColor Magenta
+Write-Host "(These operations are irreversible without manual reinstallation)" -ForegroundColor DarkGray
 Write-Host ""
 
 $uninstallEdge     = $false
 $uninstallOneDrive = $false
-$updateProfil      = '2'   # defaut : securite uniquement
+$updateProfil      = '2'   # default: security only
 
-Write-Host "  PROFIL WINDOWS UPDATE :" -ForegroundColor White
-Write-Host "    [1] Maximum    - Toutes les MAJ (securite, qualite, pilotes, fonctionnalites)" -ForegroundColor Green
-Write-Host "    [2] Securite   - MAJ securite/qualite uniquement, pas de fonctionnalites ni pilotes" -ForegroundColor Yellow
-Write-Host "    [3] Desactiver - Desactive completement Windows Update" -ForegroundColor Red
+Write-Host "  WINDOWS UPDATE PROFILE:" -ForegroundColor White
+Write-Host "    [1] Maximum  - All updates (security, quality, drivers, feature updates)" -ForegroundColor Green
+Write-Host "    [2] Security - Security/quality updates only, no feature updates or drivers" -ForegroundColor Yellow
+Write-Host "    [3] Disable  - Completely disable Windows Update" -ForegroundColor Red
 Write-Host ""
 do {
-    $ans = Read-Host "  Choix profil MAJ (1/2/3) [defaut: 2]"
+    $ans = Read-Host "  Update profile choice (1/2/3) [default: 2]"
     if ($ans -eq '') { $ans = '2' }
 } while ($ans -notin @('1','2','3'))
 $updateProfil = $ans
-$profilLabel = @{'1'='Maximum'; '2'='Securite uniquement'; '3'='Desactive'}[$updateProfil]
-Write-Host "  -> Profil MAJ : $profilLabel" -ForegroundColor Yellow
-Write-Log "Option choisie : profil Windows Update = $profilLabel" 'INFO'
+$profilLabel = @{'1'='Maximum'; '2'='Security only'; '3'='Disabled'}[$updateProfil]
+Write-Host "  -> Update profile: $profilLabel" -ForegroundColor Yellow
+Write-Log "Option selected: Windows Update profile = $profilLabel" 'INFO'
 Write-Host ""
 
-$ans = Read-Host "  Desinstaller Microsoft Edge completement ? (O/N)"
-if ($ans -ieq 'O') {
+$ans = Read-Host "  Completely uninstall Microsoft Edge? (Y/N)"
+if ($ans -ieq 'Y') {
     $uninstallEdge = $true
-    Write-Host "  -> Edge sera desinstalle apres les tweaks principaux." -ForegroundColor Yellow
-    Write-Log "Option choisie : desinstallation Edge = OUI" 'INFO'
+    Write-Host "  -> Edge will be uninstalled after the main tweaks." -ForegroundColor Yellow
+    Write-Log "Option selected: Edge uninstall = YES" 'INFO'
 } else {
-    Write-Log "Option choisie : desinstallation Edge = NON" 'INFO'
+    Write-Log "Option selected: Edge uninstall = NO" 'INFO'
 }
 
-$ans = Read-Host "  Desinstaller OneDrive completement ? (O/N)"
-if ($ans -ieq 'O') {
+$ans = Read-Host "  Completely uninstall OneDrive? (Y/N)"
+if ($ans -ieq 'Y') {
     $uninstallOneDrive = $true
-    Write-Host "  -> OneDrive sera desinstalle apres les tweaks principaux." -ForegroundColor Yellow
-    Write-Log "Option choisie : desinstallation OneDrive = OUI" 'INFO'
+    Write-Host "  -> OneDrive will be uninstalled after the main tweaks." -ForegroundColor Yellow
+    Write-Log "Option selected: OneDrive uninstall = YES" 'INFO'
 } else {
-    Write-Log "Option choisie : desinstallation OneDrive = NON" 'INFO'
+    Write-Log "Option selected: OneDrive uninstall = NO" 'INFO'
 }
 
 Write-Host ""
 
-# ── PHASE A : Sauvegarde pre-tweaks ──────────────────────────────────────────
-Write-Step "PHASE A - Sauvegarde (point de restauration + etat services)"
+# ── PHASE A: Pre-tweak backup ──────────────────────────────────────────────────
+Write-Step "PHASE A - Backup (restore point + service/registry state)"
 Invoke-Script "$SCRIPTS\01_backup.ps1"
 
-# ── PHASE B : Tweaks automatiques ─────────────────────────────────────────────
-Write-Step "PHASE B.1 - Tweaks registre (consolides, dedupliques)"
+# ── PHASE B: Automated tweaks ──────────────────────────────────────────────────
+Write-Step "PHASE B.1 - Registry tweaks (consolidated, deduplicated)"
 Invoke-Script "$SCRIPTS\02_registry.ps1"
 
-Write-Step "PHASE B.2 - Desactivation services inutiles"
+Write-Step "PHASE B.2 - Disable unnecessary services"
 Invoke-Script "$SCRIPTS\03_services.ps1"
 
-Write-Step "PHASE B.3 - Configuration boot (bcdedit)"
+Write-Step "PHASE B.3 - Boot configuration (bcdedit)"
 Invoke-Script "$SCRIPTS\04_bcdedit.ps1"
 
-Write-Step "PHASE B.4 - Plan d'alimentation Ultimate Performance"
+Write-Step "PHASE B.4 - Ultimate Performance power plan"
 Invoke-Script "$SCRIPTS\05_power.ps1"
 
-Write-Step "PHASE B.5 - DNS Cloudflare (1.1.1.1 / 1.0.0.1)"
+Write-Step "PHASE B.5 - Cloudflare DNS (1.1.1.1 / 1.0.0.1)"
 Invoke-Script "$SCRIPTS\06_dns.ps1"
 
-Write-Step "PHASE B.6 - Politiques Microsoft Edge"
+Write-Step "PHASE B.6 - Microsoft Edge policies"
 Invoke-Script "$SCRIPTS\07_edge.ps1"
 
-Write-Step "PHASE B.7 - Suppression applications UWP bloatware"
+Write-Step "PHASE B.7 - Remove bloatware UWP apps"
 Invoke-Script "$SCRIPTS\08_debloat.ps1"
 
-Write-Step "PHASE B.8 - O`&O ShutUp10++ (mode silencieux)"
+Write-Step "PHASE B.8 - O&O ShutUp10++ (silent mode)"
 Invoke-Script "$SCRIPTS\09_oosu10.ps1"
 
-Write-Step "PHASE B.9 - SetTimerResolution au demarrage"
+Write-Step "PHASE B.9 - SetTimerResolution at startup"
 Invoke-Script "$SCRIPTS\10_timer.ps1"
 
-Write-Step "PHASE B.10 - Suspension selective USB"
+Write-Step "PHASE B.10 - USB selective suspend"
 Invoke-Script "$SCRIPTS\11_usb.ps1"
 
-Write-Step "PHASE B.11 - Desactivation IA / Recall / Copilot (25H2)"
+Write-Step "PHASE B.11 - Disable AI / Recall / Copilot (25H2)"
 Invoke-Script "$SCRIPTS\12_ai_disable.ps1"
 
-Write-Step "PHASE B.12 - Taches planifiees telemetrie + PS7 + Brave"
+Write-Step "PHASE B.12 - Telemetry scheduled tasks + PS7 + Brave"
 Invoke-Script "$SCRIPTS\13_telemetry_tasks.ps1"
 
-Write-Step "PHASE B.13 - Tweaks reseau complementaires (Teredo)"
+Write-Step "PHASE B.13 - Additional network tweaks (Teredo)"
 Invoke-Script "$SCRIPTS\14_network_tweaks.ps1"
 
-Write-Step "PHASE B.14 - Profil Windows Update : $profilLabel"
+Write-Step "PHASE B.14 - Windows Update profile: $profilLabel"
 & "$SCRIPTS\15_windows_update.ps1" -Profil $updateProfil
 
-# ── OPTIONS : desinstallations physiques ─────────────────────────────────────
+# ── OPTIONS: physical uninstalls ──────────────────────────────────────────────
 if ($uninstallEdge) {
-    Write-Step "OPTION - Desinstallation physique Microsoft Edge"
+    Write-Step "OPTION - Physical uninstall of Microsoft Edge"
     Invoke-Script "$SCRIPTS\opt_edge_uninstall.ps1"
 }
 
 if ($uninstallOneDrive) {
-    Write-Step "OPTION - Desinstallation OneDrive (Win32)"
+    Write-Step "OPTION - OneDrive uninstall (Win32)"
     Invoke-Script "$SCRIPTS\opt_onedrive_uninstall.ps1"
 }
 
-# ── Resume ────────────────────────────────────────────────────────────────────
+# ── Summary ────────────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "================================================" -ForegroundColor Green
-Write-Host "   TWEAKS AUTOMATIQUES TERMINES                 " -ForegroundColor Green
+Write-Host "   AUTOMATED TWEAKS COMPLETE                    " -ForegroundColor Green
 Write-Host "================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "ETAPES MANUELLES RESTANTES (voir readme.txt a la racine du pack) :" -ForegroundColor Cyan
-Write-Host "  1. Redemarrer le PC"
-Write-Host "  2. [Mode Sans Echec] Desactiver Windows Defender"
-Write-Host "  3. MSI Utils - activer MSI sur GPU / NIC / NVMe"
-Write-Host "  4. Interrupt Affinity - epingler interruptions GPU sur un coeur CPU"
-Write-Host "  5. Carte reseau - desactiver offloads, augmenter buffers"
-Write-Host "  6. Gestionnaire de peripheriques - economie d'energie USB"
-Write-Host "  7. NVIDIA Profile Inspector - profils par jeu"
-Write-Host "  8. Panneau de configuration - suivre readme du dossier 4"
+Write-Host "REMAINING MANUAL STEPS (see readme.txt at the pack root):" -ForegroundColor Cyan
+Write-Host "  1. Reboot the PC"
+Write-Host "  2. [Safe Mode] Disable Windows Defender"
+Write-Host "  3. MSI Utils - enable MSI on GPU / NIC / NVMe"
+Write-Host "  4. Interrupt Affinity - pin GPU interrupts to a CPU core"
+Write-Host "  5. Network adapter - disable offloads, increase buffers"
+Write-Host "  6. Device Manager - disable USB power saving"
+Write-Host "  7. NVIDIA Profile Inspector - per-game profiles"
+Write-Host "  8. Control Panel - follow folder 4 readme"
 Write-Host ""
-Write-Host "Pour annuler tous les tweaks : .\restore_all.ps1" -ForegroundColor Gray
+Write-Host "To undo all tweaks: .\restore_all.ps1" -ForegroundColor Gray
 Write-Host ""
-Write-Host "Log complet : $LOG_FILE" -ForegroundColor DarkGray
+Write-Host "Full log: $LOG_FILE" -ForegroundColor DarkGray
 Write-Host ""
 
 Write-Log "============================================================"
-Write-Log "Execution terminee : $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" 'INFO'
+Write-Log "Execution complete: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" 'INFO'
 Write-Log "============================================================"
 
-$restart = Read-Host "Redemarrer maintenant ? (O/N)"
-if ($restart -ieq 'O') {
-    Write-Log "Redemarrage demande par l'utilisateur." 'INFO'
+$restart = Read-Host "Restart now? (Y/N)"
+if ($restart -ieq 'Y') {
+    Write-Log "Restart requested by user." 'INFO'
     Restart-Computer -Force
 }

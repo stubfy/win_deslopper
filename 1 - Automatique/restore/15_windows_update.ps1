@@ -1,7 +1,7 @@
 #Requires -RunAsAdministrator
-# restore\15_windows_update.ps1 - Restaure Windows Update en mode maximum (defaut Windows)
+# restore\15_windows_update.ps1 - Restore Windows Update to maximum mode (Windows default)
 
-Write-Host "    Restauration Windows Update -> mode maximum (defaut)..."
+Write-Host "    Restoring Windows Update -> maximum mode (default)..."
 
 $SCRIPTS = Join-Path (Split-Path $PSScriptRoot) "scripts"
 & "$SCRIPTS\15_windows_update.ps1" -Profil 1

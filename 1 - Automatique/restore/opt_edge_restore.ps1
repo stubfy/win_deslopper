@@ -1,18 +1,18 @@
-# restore\opt_edge_restore.ps1 - Reinstallation de Microsoft Edge
+# restore\opt_edge_restore.ps1 - Reinstall Microsoft Edge
 
-# Supprimer le blocage de reinstallation
+# Remove reinstallation block
 $noEdge = 'HKLM:\SOFTWARE\Microsoft\EdgeUpdate'
 if (Test-Path $noEdge) {
     Remove-ItemProperty -Path $noEdge -Name 'DoNotUpdateToEdgeWithChromium' -ErrorAction SilentlyContinue
-    Write-Host "    Blocage reinstallation Edge supprime."
+    Write-Host "    Edge reinstallation block removed."
 }
 
-# Tentative de reinstallation via winget
-Write-Host "    Reinstallation de Microsoft Edge via winget..."
+# Attempt reinstallation via winget
+Write-Host "    Reinstalling Microsoft Edge via winget..."
 $result = winget install --id Microsoft.Edge --silent --accept-package-agreements --accept-source-agreements 2>&1
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "    [OK] Edge reinstalle."
+    Write-Host "    [OK] Edge reinstalled."
 } else {
-    Write-Host "    winget a retourne : $LASTEXITCODE" -ForegroundColor Yellow
-    Write-Host "    Telecharger Edge manuellement : https://www.microsoft.com/edge" -ForegroundColor Gray
+    Write-Host "    winget returned: $LASTEXITCODE" -ForegroundColor Yellow
+    Write-Host "    Download Edge manually: https://www.microsoft.com/edge" -ForegroundColor Gray
 }

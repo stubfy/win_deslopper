@@ -1,13 +1,13 @@
-# restore\07_power.ps1 - Restaure le plan d'alimentation equilibre par defaut
+# restore\07_power.ps1 - Restore the default Balanced power plan
 
-# Reactiver l'hibernation
+# Re-enable hibernation
 powercfg -h on 2>&1 | Out-Null
-Write-Host "    Hibernation reactivee."
+Write-Host "    Hibernation re-enabled."
 
-# Activer le plan Equilibre (GUID Windows integre, toujours present)
+# Activate the Balanced plan (built-in Windows GUID, always present)
 powercfg -setactive 381b4222-f694-41f0-9685-ff5bb260df2e 2>&1 | Out-Null
-Write-Host "    Plan Equilibre active (381b4222-f694-41f0-9685-ff5bb260df2e)"
+Write-Host "    Balanced plan activated (381b4222-f694-41f0-9685-ff5bb260df2e)"
 
-# Informer l'utilisateur du plan Ultimate Performance cree (pas supprime automatiquement)
-Write-Host "    Note: le plan 'Ultimate Performance' cree reste disponible dans les options d'alimentation." -ForegroundColor Gray
-Write-Host "    Le supprimer manuellement si souhaite : powercfg -delete <GUID>" -ForegroundColor Gray
+# Note about the created Ultimate Performance plan (not automatically deleted)
+Write-Host "    Note: the created 'Ultimate Performance' plan remains available in power options." -ForegroundColor Gray
+Write-Host "    Delete it manually if desired: powercfg -delete <GUID>" -ForegroundColor Gray

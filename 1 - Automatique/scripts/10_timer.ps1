@@ -1,10 +1,10 @@
-# 10_timer.ps1 - Ajoute SetTimerResolution au demarrage de Windows (shell:startup)
+# 10_timer.ps1 - Add SetTimerResolution to Windows startup (shell:startup)
 
 $ROOT     = Split-Path $PSScriptRoot
 $timerExe = Join-Path $ROOT "tools\SetTimerResolution.exe"
 
 if (-not (Test-Path $timerExe)) {
-    Write-Host "    SetTimerResolution.exe introuvable : $timerExe" -ForegroundColor Yellow
+    Write-Host "    SetTimerResolution.exe not found: $timerExe" -ForegroundColor Yellow
     return
 }
 
@@ -19,7 +19,7 @@ $shortcut.WorkingDirectory = Split-Path $timerExe
 $shortcut.Description      = "SetTimerResolution - Opti Pack"
 $shortcut.Save()
 
-Write-Host "    Raccourci cree : $shortcutPath"
+Write-Host "    Shortcut created: $shortcutPath"
 Write-Host "    Arguments      : --resolution 5200 --no-console"
-Write-Host "    Tip            : utiliser MeasureSleep.exe pour verifier la resolution effective"
-Write-Host "                     (ajuster valeur si besoin : 5000, 5100, 5200...)"
+Write-Host "    Tip            : use MeasureSleep.exe to verify the actual resolution"
+Write-Host "                     (adjust value if needed: 5000, 5100, 5200...)"
