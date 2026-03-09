@@ -2,43 +2,6 @@
 Advanced NIC optimization
 ===========================
 
-WHAT IT DOES
-------------
-Disables NIC features designed for servers and multi-connection environments,
-which introduce batching and additional latency on a gaming PC with a single
-active connection.
-
-Also includes TCP Optimizer (third-party tool) to tune Windows TCP/IP stack
-parameters.
-
-
-TECHNICAL DETAIL
-----------------
-NIC offloads move TCP/IP processing to the card firmware to reduce CPU load
-on servers. On a gaming PC :
-
-- Large Send Offload (LSO) : batches multiple outgoing TCP packets into
-  a single segment before sending. Reduces interrupts but increases
-  per-packet latency.
-
-- Interrupt Moderation : batches multiple NIC interrupts into one before
-  raising them to the CPU. Very useful at 10 Gbps, harmful in gaming
-  (extra delay between packet reception and processing).
-
-- Receive/Transmit Buffers : size of the DMA ring buffer between the NIC
-  and system memory. At 2048, packet drops under load are avoided while
-  buffer fill latency is kept low.
-
-- Flow Control (PAUSE frames) : throughput regulation mechanism between
-  the NIC and the switch. Can introduce artificial pauses.
-
-- Energy Efficient Ethernet (EEE) : puts the transceiver to sleep during
-  low-activity periods. Causes latency spikes on wake-up.
-
-The settings below target the Intel I226-V specifically. Exact parameter
-names may vary depending on the installed network card.
-
-
 PROCEDURE -- DEVICE MANAGER
 ----------------------------
 1. Open Device Manager
@@ -97,3 +60,40 @@ ROLLBACK
 NIC "Advanced" tab : click "Restore Defaults" if available, otherwise
 revert each value manually.
 TCP : apply FirstBackup.spg in TCP Optimizer.
+
+
+WHAT IT DOES
+------------
+Disables NIC features designed for servers and multi-connection environments,
+which introduce batching and additional latency on a gaming PC with a single
+active connection.
+
+Also includes TCP Optimizer (third-party tool) to tune Windows TCP/IP stack
+parameters.
+
+
+TECHNICAL DETAIL
+----------------
+NIC offloads move TCP/IP processing to the card firmware to reduce CPU load
+on servers. On a gaming PC :
+
+- Large Send Offload (LSO) : batches multiple outgoing TCP packets into
+  a single segment before sending. Reduces interrupts but increases
+  per-packet latency.
+
+- Interrupt Moderation : batches multiple NIC interrupts into one before
+  raising them to the CPU. Very useful at 10 Gbps, harmful in gaming
+  (extra delay between packet reception and processing).
+
+- Receive/Transmit Buffers : size of the DMA ring buffer between the NIC
+  and system memory. At 2048, packet drops under load are avoided while
+  buffer fill latency is kept low.
+
+- Flow Control (PAUSE frames) : throughput regulation mechanism between
+  the NIC and the switch. Can introduce artificial pauses.
+
+- Energy Efficient Ethernet (EEE) : puts the transceiver to sleep during
+  low-activity periods. Causes latency spikes on wake-up.
+
+The settings above target the Intel I226-V specifically. Exact parameter
+names may vary depending on the installed network card.

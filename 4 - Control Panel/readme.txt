@@ -2,18 +2,6 @@
 Manual settings via the Windows interface
 ==========================================
 
-WHAT IT DOES
-------------
-Some Windows settings are only accessible through the graphical interface --
-either because they depend on an active user session, or because they go
-through WinRT APIs not exposed on the command line, or because they modify
-per-component settings (per monitor, per application) that cannot be
-generalized to a single registry key.
-
-This folder contains shortcuts to each relevant settings page.
-Open each shortcut and apply the setting described below.
-
-
 SETTINGS TO APPLY
 -----------------
 
@@ -81,3 +69,15 @@ SETTINGS TO APPLY
 11 - Taskbar (ms-settings:taskbar)
     Adjust taskbar behavior as preferred.
     Enable seconds display in the clock (at the bottom of the page).
+
+
+WHAT IT DOES
+------------
+Some Windows settings are only accessible through the graphical interface --
+either because they depend on an active user session, or because they go
+through WinRT APIs not exposed on the command line, or because they modify
+per-component settings (per monitor, per application) that cannot be
+generalized to a single registry key.
+
+This folder contains shortcuts to each relevant settings page.
+Open each shortcut and apply the setting described above.

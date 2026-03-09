@@ -2,6 +2,26 @@
 Additional tweaks via Ultimate Windows Tweaker v5
 ==================================================
 
+PROCEDURE
+---------
+1. Open this folder
+2. Launch "Ultimate Windows Tweaker v 5\Ultimate Windows Tweaker 5.0.exe"
+   as administrator (right-click > Run as administrator)
+3. Menu File > Load Settings > select Settings.ini in this folder
+4. Review the tweaks to confirm they match your needs
+5. Click "Apply" to apply
+6. Reboot if prompted
+
+
+NOTES
+-----
+UWT v4.4.1 (Windows 10) is also present in this folder as an archive.
+Do not use it on Windows 11 -- use UWT v5 exclusively.
+
+If a tweak produces unexpected behavior, UWT allows undoing it individually
+through the same interface by deselecting the tweak and clicking Apply.
+
+
 WHAT IT DOES
 ------------
 Ultimate Windows Tweaker (UWT) is a GUI tool that applies Windows settings
@@ -29,23 +49,3 @@ through intermediate APIs. The tweaks selected in Settings.ini have been
 validated for 25H2. Tweaks that overlap with the automated scripts
 (telemetry, background apps, GameDVR, Defender via policy) have been
 excluded from Settings.ini to avoid conflicts.
-
-
-PROCEDURE
----------
-1. Open this folder
-2. Launch "Ultimate Windows Tweaker v 5\Ultimate Windows Tweaker 5.0.exe"
-   as administrator (right-click > Run as administrator)
-3. Menu File > Load Settings > select Settings.ini in this folder
-4. Review the tweaks to confirm they match your needs
-5. Click "Apply" to apply
-6. Reboot if prompted
-
-
-NOTES
------
-UWT v4.4.1 (Windows 10) is also present in this folder as an archive.
-Do not use it on Windows 11 -- use UWT v5 exclusively.
-
-If a tweak produces unexpected behavior, UWT allows undoing it individually
-through the same interface by deselecting the tweak and clicking Apply.

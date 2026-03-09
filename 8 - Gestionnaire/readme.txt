@@ -2,28 +2,6 @@
 USB power saving and unused device cleanup
 ==========================================
 
-WHAT IT DOES
-------------
-Windows automatically cuts power to USB devices (keyboard, mouse, hubs)
-after a period of inactivity to save energy. This behavior can cause brief
-input dropouts or a noticeable wake-up delay on gaming peripherals.
-
-This folder contains a shortcut to Device Manager and instructions for
-disabling this power management at the individual device level.
-
-
-DISTINCTION FROM THE AUTOMATED SCRIPT
---------------------------------------
-The 11_usb.ps1 script (run by run_all.bat) disables USB selective suspend
-at the power plan level via powercfg. This acts on the global USB bus
-policy but not on individual device nodes.
-
-The manual procedure below acts at the DevNode level for each device :
-it disables the DEVPROP AllowIdleIrpInD3 property on the specific node,
-which prevents the USB hub driver from sending suspend commands to that
-particular device. The two actions are complementary.
-
-
 PROCEDURE -- USB POWER SAVING
 ------------------------------
 1. Open Device Manager (Gestionnaire.lnk shortcut)
@@ -76,3 +54,25 @@ ROLLBACK
 --------
 "Power Management" tab : re-check the box.
 For disabled devices : right-click > Enable device.
+
+
+WHAT IT DOES
+------------
+Windows automatically cuts power to USB devices (keyboard, mouse, hubs)
+after a period of inactivity to save energy. This behavior can cause brief
+input dropouts or a noticeable wake-up delay on gaming peripherals.
+
+This folder contains a shortcut to Device Manager and instructions for
+disabling this power management at the individual device level.
+
+
+DISTINCTION FROM THE AUTOMATED SCRIPT
+--------------------------------------
+The 11_usb.ps1 script (run by run_all.bat) disables USB selective suspend
+at the power plan level via powercfg. This acts on the global USB bus
+policy but not on individual device nodes.
+
+The manual procedure above acts at the DevNode level for each device :
+it disables the DEVPROP AllowIdleIrpInD3 property on the specific node,
+which prevents the USB hub driver from sending suspend commands to that
+particular device. The two actions are complementary.

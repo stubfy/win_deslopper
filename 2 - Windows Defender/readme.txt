@@ -2,6 +2,37 @@
 Disabling the real-time antivirus engine
 =========================================
 
+PROCEDURE
+---------
+1. Open msconfig (Win+R > msconfig > Enter)
+2. Boot tab > check "Safe boot" > Minimal mode > OK
+3. Reboot -- Windows starts in Safe Mode
+4. Open PowerShell as administrator
+5. Run : Set-ExecutionPolicy Bypass -Scope Process
+6. Run the script : .\DisableDefender.ps1
+7. Reopen msconfig > uncheck "Safe boot" > OK
+8. Reboot normally
+
+Note : on some 25H2 configurations, even in Safe Mode, modifications may
+be blocked if Smart App Control is active. In that case, disable Smart App
+Control first via Windows Security > App & browser control.
+
+
+ROLLBACK
+--------
+To re-enable Defender, restore the default values :
+
+  WinDefend : Start = 3
+  Sense      : Start = 3
+  WdFilter   : Start = 0
+  WdNisDrv   : Start = 3
+  WdNisSvc   : Start = 3
+  WdBoot     : Start = 0
+
+Or use the restore file provided in this folder (same Safe Mode procedure
+required).
+
+
 WHAT IT DOES
 ------------
 Windows Defender runs continuously in the background and scans every
@@ -46,34 +77,3 @@ WdFilter is particularly impactful : as a minifilter, it intercepts all
 file system operations (IRP_MJ_CREATE, IRP_MJ_READ, etc.) through the
 Filter Manager (fltmgr.sys). Disabling it removes this interception point
 from the I/O stack.
-
-
-PROCEDURE
----------
-1. Open msconfig (Win+R > msconfig > Enter)
-2. Boot tab > check "Safe boot" > Minimal mode > OK
-3. Reboot -- Windows starts in Safe Mode
-4. Open PowerShell as administrator
-5. Run : Set-ExecutionPolicy Bypass -Scope Process
-6. Run the script : .\DisableDefender.ps1
-7. Reopen msconfig > uncheck "Safe boot" > OK
-8. Reboot normally
-
-Note : on some 25H2 configurations, even in Safe Mode, modifications may
-be blocked if Smart App Control is active. In that case, disable Smart App
-Control first via Windows Security > App & browser control.
-
-
-ROLLBACK
---------
-To re-enable Defender, restore the default values :
-
-  WinDefend : Start = 3
-  Sense      : Start = 3
-  WdFilter   : Start = 0
-  WdNisDrv   : Start = 3
-  WdNisSvc   : Start = 3
-  WdBoot     : Start = 0
-
-Or use the restore file provided in this folder (same Safe Mode procedure
-required).

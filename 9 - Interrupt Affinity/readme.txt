@@ -2,6 +2,35 @@
 Pinning GPU interrupts to a dedicated CPU core
 ===============================================
 
+PROCEDURE
+---------
+STEP 1 -- Identify the GPU's PCI bridge
+
+1. Open Device Manager (Gestionnaire.lnk shortcut)
+2. Menu View > Devices by connection
+3. Locate the graphics card in the connection tree
+4. Identify the "PCI to PCI Bridge" immediately above the GPU
+5. Right-click on this bridge > Properties > Details
+6. Select "Physical device object name" from the dropdown
+7. Note the value (e.g. \Device\NTPNP_PCI0010)
+
+STEP 2 -- Configure affinity
+
+1. Open intPolicy_x64.exe as administrator
+2. In the list, locate :
+   - The graphics card (GPU)
+   - The associated PCI bridge (PCI to PCI Bridge identified above)
+   - The PCI root complex (PCI Express Root Complex)
+3. For each of these three items, set the affinity to CPU 2
+4. Apply and reboot
+
+
+ROLLBACK
+--------
+Open intPolicy_x64.exe > select each modified device >
+choose "Default" as affinity policy > apply > reboot.
+
+
 WHAT IT DOES
 ------------
 By default, Windows distributes hardware interrupts (IRQs) across all
@@ -38,32 +67,3 @@ RISK
 A wrong core choice or wrong device selection can increase latency instead
 of reducing it. Precisely identify the GPU -> PCI Bridge -> Root Complex
 chain before applying this setting.
-
-
-PROCEDURE
----------
-STEP 1 -- Identify the GPU's PCI bridge
-
-1. Open Device Manager (Gestionnaire.lnk shortcut)
-2. Menu View > Devices by connection
-3. Locate the graphics card in the connection tree
-4. Identify the "PCI to PCI Bridge" immediately above the GPU
-5. Right-click on this bridge > Properties > Details
-6. Select "Physical device object name" from the dropdown
-7. Note the value (e.g. \Device\NTPNP_PCI0010)
-
-STEP 2 -- Configure affinity
-
-1. Open intPolicy_x64.exe as administrator
-2. In the list, locate :
-   - The graphics card (GPU)
-   - The associated PCI bridge (PCI to PCI Bridge identified above)
-   - The PCI root complex (PCI Express Root Complex)
-3. For each of these three items, set the affinity to CPU 2
-4. Apply and reboot
-
-
-ROLLBACK
---------
-Open intPolicy_x64.exe > select each modified device >
-choose "Default" as affinity policy > apply > reboot.

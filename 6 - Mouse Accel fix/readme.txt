@@ -2,6 +2,27 @@
 Removing mouse acceleration (MarkC fix)
 ========================================
 
+WHICH .REG FILE TO APPLY
+-------------------------
+Open Settings > System > Display and check the scale percentage shown
+for your primary monitor.
+
+  100%  -> Already applied by the automated scripts
+  125%  -> Open "Windows 10 Fixes" folder > apply the 125% .reg file
+  150%  -> Open "Windows 10 Fixes" folder > apply the 150% .reg file
+  175%  -> Open "Windows 10 Fixes" folder > apply the 175% .reg file
+  200%  -> Open "Windows 10 Fixes" folder > apply the 200% .reg file
+
+Double-click the corresponding .reg file and confirm the merge.
+A sign-out / sign-in is required for the change to take effect.
+
+
+ROLLBACK
+--------
+Apply the Windows_10+8.x_Default.reg file at the root of this folder
+to revert to the Windows default acceleration values.
+
+
 WHAT IT DOES
 ------------
 Windows applies dynamic acceleration to mouse movement by default : the
@@ -35,27 +56,6 @@ movement based on the ratio between the logical and physical screen resolution.
 The automated script (02_registry.ps1 via tweaks_consolidated.reg)
 already applies the fix for 100% scaling. This folder is only needed
 for other scaling levels.
-
-
-WHICH .REG FILE TO APPLY
--------------------------
-Open Settings > System > Display and check the scale percentage shown
-for your primary monitor.
-
-  100%  -> Already applied by the automated scripts
-  125%  -> Open "Windows 10 Fixes" folder > apply the 125% .reg file
-  150%  -> Open "Windows 10 Fixes" folder > apply the 150% .reg file
-  175%  -> Open "Windows 10 Fixes" folder > apply the 175% .reg file
-  200%  -> Open "Windows 10 Fixes" folder > apply the 200% .reg file
-
-Double-click the corresponding .reg file and confirm the merge.
-A sign-out / sign-in is required for the change to take effect.
-
-
-ROLLBACK
---------
-Apply the Windows_10+8.x_Default.reg file at the root of this folder
-to revert to the Windows default acceleration values.
 
 
 NOTE ON WINDOWS 11
