@@ -16,7 +16,7 @@
 $ErrorActionPreference = 'Continue'
 $ROOT         = Split-Path (Split-Path $MyInvocation.MyCommand.Path)
 $SCRIPTS      = Join-Path $ROOT "scripts"
-$PACK_VERSION = 'v0.2'
+$PACK_VERSION = 'v0.3'
 $LOG_DIR      = Join-Path $env:APPDATA 'win_deslopper\logs'
 $LOG_FILE     = Join-Path $LOG_DIR "win_deslopper.log"
 
