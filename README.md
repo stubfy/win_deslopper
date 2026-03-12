@@ -20,6 +20,7 @@
 - [Rollback](#rollback)
 - [Project structure](#project-structure)
 - [Warnings](#warnings)
+- [About](#about)
 
 ---
 
