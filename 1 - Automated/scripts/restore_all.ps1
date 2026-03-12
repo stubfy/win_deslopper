@@ -85,6 +85,9 @@ Invoke-Script "$RESTORE\15_windows_update.ps1"
 Write-Step "Restore UWT equivalent tweaks"
 Invoke-Script "$RESTORE\16_uwt.ps1"
 
+Write-Step "Restore mouse acceleration curves (Windows default)"
+Invoke-Script "$RESTORE\17_mouse_accel.ps1"
+
 # Scheduled tasks
 Write-Host ""
 Write-Host "    Note: disabled telemetry scheduled tasks are not" -ForegroundColor Gray

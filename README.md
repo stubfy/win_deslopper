@@ -58,7 +58,7 @@ Estimated duration: 5 to 15 minutes. A reboot prompt is shown at the end.
 
 **2. Reboot**
 
-**3. Follow the manual steps in order (folders 2 to 11)**
+**3. Follow the manual steps in order (folders 2 to 10)**
 
 Each folder contains a `readme.txt` with detailed instructions.
 
@@ -85,6 +85,8 @@ Each folder contains a `readme.txt` with detailed instructions.
 | `13_telemetry_tasks.ps1` | Telemetry scheduled tasks + PS7 + Brave |
 | `14_network_tweaks.ps1` | Teredo disabled |
 | `15_windows_update.ps1` | Windows Update profile (Maximum / Security / Disabled) |
+| `16_uwt.ps1` | UWT-equivalent tweaks (appearance, privacy, context menu) |
+| `17_mouse_accel.ps1` | MarkC mouse acceleration fix (auto-detects DPI scaling) |
 
 ### Windows Update profiles
 
@@ -108,7 +110,7 @@ Each folder contains a `readme.txt` with detailed instructions.
 - WaitToKillServiceTimeout reduced (2000 ms)
 - Prefetch disabled
 - File extensions visible
-- MarkC mouse acceleration fix (100% DPI scaling)
+- MarkC mouse acceleration fix (auto-detects DPI scaling)
 - Hibernate disabled
 - Keyboard: delay 0, max repeat rate
 - HDCP disabled (NVIDIA)
@@ -140,12 +142,11 @@ To be done in order after rebooting. Each folder contains a `readme.txt` with fu
 | 2 | **Windows Defender** | Requires Safe Mode — services protected by PPL in normal mode | High |
 | 3 | **Control Panel** | ms-settings shortcuts — settings not exposed via CLI | Low |
 | 4 | **MSI Utils** | Manual identification of compatible devices required | Moderate |
-| 5 | **Mouse Accel fix** | .reg file must match DPI scaling (125%, 150%...) | Low |
-| 6 | **NVInspector** | Per-game NVIDIA driver profiles — user-specific | Low |
-| 7 | **Device Manager** | USB power saving per device node — not cleanly scriptable | Low |
-| 8 | **Interrupt Affinity** | GPU PCI bridge identification required | Moderate |
-| 9 | **Network WIP** | NIC settings depend on adapter model | Moderate |
-| 10 | **Tools** | Complementary tools (Autoruns, temp folders) | Low |
+| 5 | **NVInspector** | Per-game NVIDIA driver profiles — user-specific | Low |
+| 6 | **Device Manager** | USB power saving per device node — not cleanly scriptable | Low |
+| 7 | **Interrupt Affinity** | GPU PCI bridge identification required | Moderate |
+| 8 | **Network WIP** | NIC settings depend on adapter model | Moderate |
+| 9 | **Tools** | Complementary tools (Autoruns, temp folders) | Low |
 
 ---
 
@@ -185,7 +186,7 @@ win_deslopper/
 │   ├── scripts/
 │   │   ├── run_all.ps1               Main PowerShell launcher
 │   │   ├── restore_all.ps1           Full rollback launcher
-│   │   ├── 01_backup.ps1 ... 16_*   Scripts by category
+│   │   ├── 01_backup.ps1 ... 17_*   Scripts by category
 │   │   └── opt_*.ps1                 Optional (Edge, OneDrive removal)
 │   ├── restore/                      Symmetric rollback scripts
 │   ├── tools/                        Third-party tools
@@ -198,8 +199,8 @@ win_deslopper/
 ├── 2 - Windows Defender/
 ├── 3 - Control Panel/
 ├── 4 - MSI Utils/
-├── 5 - Mouse Accel fix/
 ├── 6 - NVInspector/
+├── 7 - Gestionnaire/
 ├── 7 - Gestionnaire/
 ├── 8 - Interrupt Affinity/
 ├── 9 - Network WIP/

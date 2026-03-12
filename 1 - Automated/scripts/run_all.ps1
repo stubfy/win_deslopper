@@ -171,6 +171,9 @@ Write-Step "PHASE B.14 - Windows Update profile: $profilLabel"
 Write-Step "PHASE B.15 - UWT equivalent tweaks (appearance, privacy, context menu)"
 Invoke-Script "$SCRIPTS\16_uwt.ps1"
 
+Write-Step "PHASE B.16 - MarkC mouse acceleration fix (1:1 scaling)"
+Invoke-Script "$SCRIPTS\17_mouse_accel.ps1"
+
 # ── OPTIONS: physical uninstalls ──────────────────────────────────────────────
 if ($uninstallEdge) {
     Write-Step "OPTION - Physical uninstall of Microsoft Edge"
