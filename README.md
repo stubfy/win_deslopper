@@ -145,7 +145,7 @@ To be done in order after rebooting. Each folder contains a `readme.txt` with fu
 | 7 | **Device Manager** | USB power saving per device node — not cleanly scriptable | Low |
 | 8 | **Interrupt Affinity** | GPU PCI bridge identification required | Moderate |
 | 9 | **Network WIP** | NIC settings depend on adapter model | Moderate |
-| 10 | **Others** | Complementary tools (Autoruns, DeviceCleanup, temp folders) | Low |
+| 10 | **Tools** | Complementary tools (Autoruns, temp folders) | Low |
 
 ---
 
@@ -203,7 +203,7 @@ win_deslopper/
 ├── 7 - Gestionnaire/
 ├── 8 - Interrupt Affinity/
 ├── 9 - Network WIP/
-└── 10 - Others/
+└── Tools/
 ```
 
 ---
