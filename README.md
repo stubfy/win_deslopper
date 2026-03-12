@@ -227,7 +227,7 @@ win_deslopper/
 
 ## About
 
-win_deslopper is a personal collection of Windows tweaks gathered from various sources — community guides, benchmarks, forum threads, and hands-on testing. The goal is to centralize what actually makes a difference and make it as straightforward as possible to apply.
+win_deslopper is a personal collection of Windows tweaks accumulated over the years from various sources — community guides, benchmarks, forum threads, YouTube channels, and hands-on testing. The goal is to centralize what actually makes a difference and make it as straightforward as possible to apply.
 
 Some of these are simply options that should be on by default: showing file extensions, disabling GameDVR when you never use it, turning off mouse acceleration, cleaning up the right-click menu. Others go further into performance and privacy territory.
 
