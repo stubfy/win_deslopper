@@ -15,6 +15,7 @@ Windows Registry Editor Version 5.00
 "ShowFrequent"=dword:00000001
 "ShowRecent"=dword:00000001
 "link"=hex:1e,00,00,00
+"AltTabSettings"=-
 
 [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer]
 "NoLowDiskSpaceChecks"=-
@@ -147,3 +148,7 @@ Windows Registry Editor Version 5.00
 [-HKEY_CLASSES_ROOT\Directory\shell\OpenCMDHere]
 [-HKEY_CLASSES_ROOT\Directory\Background\shell\OpenCMDHere]
 [-HKEY_CLASSES_ROOT\Drive\shell\OpenCMDHere]
+
+[-HKEY_CLASSES_ROOT\Directory\shell\OpenCMDAdminHere]
+[-HKEY_CLASSES_ROOT\Directory\Background\shell\OpenCMDAdminHere]
+[-HKEY_CLASSES_ROOT\Drive\shell\OpenCMDAdminHere]

@@ -13,11 +13,13 @@ Windows Registry Editor Version 5.00
 
 ; --- Always show all tray icons (removes up-arrow button) ---
 ; --- No "- Shortcut" suffix on newly created shortcuts ---
+; --- Classic Alt+Tab menu (small thumbnails, no animations) ---
 [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer]
 "EnableAutoTray"=dword:00000000
 "ShowFrequent"=dword:00000001
 "ShowRecent"=dword:00000001
 "link"=hex:00,00,00,00
+"AltTabSettings"=dword:00000001
 
 ; --- Suppress low disk space warning balloons ---
 [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer]
@@ -221,3 +223,30 @@ Windows Registry Editor Version 5.00
 
 [HKEY_CLASSES_ROOT\Drive\shell\OpenCMDHere\command]
 @="cmd.exe /s /k pushd \"%V\""
+
+; --- "Open Command Prompt as Admin here" on folders ---
+[HKEY_CLASSES_ROOT\Directory\shell\OpenCMDAdminHere]
+@="Open Command Prompt as Admin here"
+"Icon"="cmd.exe"
+"HasLUAShield"=""
+
+[HKEY_CLASSES_ROOT\Directory\shell\OpenCMDAdminHere\command]
+@="powershell.exe -WindowStyle Hidden -Command \"Start-Process cmd.exe -ArgumentList '/s /k pushd \\\"%V\\\"' -Verb RunAs\""
+
+; --- "Open Command Prompt as Admin here" on folder background ---
+[HKEY_CLASSES_ROOT\Directory\Background\shell\OpenCMDAdminHere]
+@="Open Command Prompt as Admin here"
+"Icon"="cmd.exe"
+"HasLUAShield"=""
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\OpenCMDAdminHere\command]
+@="powershell.exe -WindowStyle Hidden -Command \"Start-Process cmd.exe -ArgumentList '/s /k pushd \\\"%V\\\"' -Verb RunAs\""
+
+; --- "Open Command Prompt as Admin here" on drives ---
+[HKEY_CLASSES_ROOT\Drive\shell\OpenCMDAdminHere]
+@="Open Command Prompt as Admin here"
+"Icon"="cmd.exe"
+"HasLUAShield"=""
+
+[HKEY_CLASSES_ROOT\Drive\shell\OpenCMDAdminHere\command]
+@="powershell.exe -WindowStyle Hidden -Command \"Start-Process cmd.exe -ArgumentList '/s /k pushd \\\"%V\\\"' -Verb RunAs\""
