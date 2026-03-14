@@ -39,9 +39,6 @@ namespace WinDeslopper {
         [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)]
         public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, ref ANIMATIONINFO pvParam, uint fWinIni);
 
-        [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto, EntryPoint="SystemParametersInfo")]
-        public static extern bool SystemParametersInfoBoolRef(uint uiAction, uint uiParam, ref bool pvParam, uint fWinIni);
-
         [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)]
         public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
     }
@@ -66,18 +63,18 @@ $SPIF_UPDATEINIFILE         = 0x01
 $SPI_FLAGS                  = $SPIF_UPDATEINIFILE -bor $SPIF_SENDCHANGE
 $SKF_DEFAULT_OFF            = 0x000001FE
 
-function Invoke-SpiBoolRef {
+function Invoke-SpiPvBool {
     param(
         [uint32]$Action,
         [bool]$Enabled,
         [string]$Label
     )
 
-    $value = $Enabled
-    $ok = [WinDeslopper.NativeMethods]::SystemParametersInfoBoolRef(
+    # These SPI_SET* flags expect a BOOL value cast to pvParam, not a pointer to BOOL.
+    $ok = [WinDeslopper.NativeMethods]::SystemParametersInfo(
         $Action,
         0,
-        [ref]$value,
+        [IntPtr]([int]$Enabled),
         [uint32]$SPI_FLAGS
     )
 
@@ -145,14 +142,14 @@ function Restore-VisualEffectsDefaults {
     New-ItemProperty -Path $desktop -Name FontSmoothing -PropertyType String -Value '2' -Force | Out-Null
     New-ItemProperty -Path $metrics -Name MinAnimate -PropertyType String -Value '1' -Force | Out-Null
 
-    Invoke-SpiBoolRef -Action $SPI_SETCLIENTAREAANIMATION -Enabled $true -Label 'Visual Effects: animate controls and elements inside windows = on'
-    Invoke-SpiBoolRef -Action $SPI_SETMENUANIMATION -Enabled $true -Label 'Visual Effects: fade or slide menus into view = on'
-    Invoke-SpiBoolRef -Action $SPI_SETTOOLTIPANIMATION -Enabled $true -Label 'Visual Effects: fade or slide ToolTips into view = on'
-    Invoke-SpiBoolRef -Action $SPI_SETSELECTIONFADE -Enabled $true -Label 'Visual Effects: fade out menu items after clicking = on'
-    Invoke-SpiBoolRef -Action $SPI_SETCURSORSHADOW -Enabled $true -Label 'Visual Effects: show shadows under mouse pointer = on'
-    Invoke-SpiBoolRef -Action $SPI_SETDROPSHADOW -Enabled $true -Label 'Visual Effects: show shadows under windows = on'
-    Invoke-SpiBoolRef -Action $SPI_SETCOMBOBOXANIMATION -Enabled $true -Label 'Visual Effects: slide open combo boxes = on'
-    Invoke-SpiBoolRef -Action $SPI_SETLISTBOXSMOOTHSCROLLING -Enabled $true -Label 'Visual Effects: smooth-scroll list boxes = on'
+    Invoke-SpiPvBool -Action $SPI_SETCLIENTAREAANIMATION -Enabled $true -Label 'Visual Effects: animate controls and elements inside windows = on'
+    Invoke-SpiPvBool -Action $SPI_SETMENUANIMATION -Enabled $true -Label 'Visual Effects: fade or slide menus into view = on'
+    Invoke-SpiPvBool -Action $SPI_SETTOOLTIPANIMATION -Enabled $true -Label 'Visual Effects: fade or slide ToolTips into view = on'
+    Invoke-SpiPvBool -Action $SPI_SETSELECTIONFADE -Enabled $true -Label 'Visual Effects: fade out menu items after clicking = on'
+    Invoke-SpiPvBool -Action $SPI_SETCURSORSHADOW -Enabled $true -Label 'Visual Effects: show shadows under mouse pointer = on'
+    Invoke-SpiPvBool -Action $SPI_SETDROPSHADOW -Enabled $true -Label 'Visual Effects: show shadows under windows = on'
+    Invoke-SpiPvBool -Action $SPI_SETCOMBOBOXANIMATION -Enabled $true -Label 'Visual Effects: slide open combo boxes = on'
+    Invoke-SpiPvBool -Action $SPI_SETLISTBOXSMOOTHSCROLLING -Enabled $true -Label 'Visual Effects: smooth-scroll list boxes = on'
     Invoke-SpiAltBool -Action $SPI_SETDRAGFULLWINDOWS -Enabled $true -Label 'Visual Effects: show window contents while dragging = on'
     Invoke-SpiAltBool -Action $SPI_SETFONTSMOOTHING -Enabled $true -Label 'Visual Effects: smooth edges of screen fonts = on'
 
