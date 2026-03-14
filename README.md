@@ -52,8 +52,8 @@ Everything scriptable is automated in a single pass. The rest is guided by `read
 
 You will be prompted for a few options before anything runs:
 - **Windows Update profile** (Maximum / Security only / Disabled), default: Security only
-- **Uninstall Edge** (optional)
-- **Uninstall OneDrive** (optional)
+- **Uninstall Edge** (optional), default: Yes
+- **Uninstall OneDrive** (optional), default: Yes
 - **Disable Windows Firewall profiles** (optional), default: Yes
 
 Estimated duration: 5 to 15 minutes. A reboot prompt is shown at the end.
