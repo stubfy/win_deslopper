@@ -1,4 +1,4 @@
-# opt_edge_uninstall.ps1 - Microsoft Edge uninstall (WinUtil / EdgeRemover-aligned)
+# opt_edge_uninstall.ps1 - Microsoft Edge uninstall (WinUtil dummy-file method)
 # OPTIONAL - called only if confirmed by the user in run_all.ps1
 
 $edgeRoots = @(
@@ -10,17 +10,12 @@ $edgeUninstallKeys = @(
     'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge'
     'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge'
 )
-$edgeClientStateKeys = @(
-    'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\ClientState\{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}'
-    'HKLM:\SOFTWARE\Microsoft\EdgeUpdate\ClientState\{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}'
-)
 $edgeUpdateDevKeys = @(
     'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdateDev'
     'HKLM:\SOFTWARE\Microsoft\EdgeUpdateDev'
 )
-$policyFile = Join-Path $env:SystemRoot 'System32\IntegratedServicesRegionPolicySet.json'
-$policyBackup = "$policyFile.win_deslopper.bak"
-$edgePolicyGuid = '{1bca2783-0de6-4269-b2b2-4bfdd4e492e5}'
+$dummyEdgePath = "$env:SystemRoot\SystemApps\Microsoft.MicrosoftEdge_8wekyb3d8bbwe"
+$dummyEdgeExe  = Join-Path $dummyEdgePath 'MicrosoftEdge.exe'
 
 function Test-EdgeInstalled {
     foreach ($root in $edgeRoots) {
@@ -72,48 +67,6 @@ function Get-EdgeSetupCandidates {
         Sort-Object FullName -Unique
 }
 
-function Grant-AdminWriteAccess {
-    param([Parameter(Mandatory = $true)][string]$Path)
-
-    $originalAcl = Get-Acl -Path $Path
-    $adminAccount = ([System.Security.Principal.SecurityIdentifier]'S-1-5-32-544').Translate([System.Security.Principal.NTAccount]).Value
-
-    $tempAcl = New-Object System.Security.AccessControl.FileSecurity
-    $tempAcl.SetSecurityDescriptorSddlForm($originalAcl.Sddl)
-    $tempAcl.SetOwner([System.Security.Principal.NTAccount]$adminAccount)
-    $tempAcl.SetAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($adminAccount, 'FullControl', 'Allow')))
-    Set-Acl -Path $Path -AclObject $tempAcl
-
-    return $originalAcl
-}
-
-function Restore-OriginalAcl {
-    param(
-        [Parameter(Mandatory = $true)][string]$Path,
-        [Parameter(Mandatory = $true)]$Acl
-    )
-
-    if (Test-Path $Path) {
-        Set-Acl -Path $Path -AclObject $Acl -ErrorAction SilentlyContinue
-    }
-}
-
-function Get-PatchedRegionPolicyContent {
-    param([Parameter(Mandatory = $true)][string]$Content)
-
-    $index = $Content.IndexOf($edgePolicyGuid, [System.StringComparison]::OrdinalIgnoreCase)
-    $regex = [regex]::new('"defaultState":"disabled"', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-
-    if ($index -lt 0) {
-        return $regex.Replace($Content, '"defaultState":"enabled"', 1)
-    }
-
-    $head = $Content.Substring(0, $index)
-    $tail = $Content.Substring($index)
-    $tail = $regex.Replace($tail, '"defaultState":"enabled"', 1)
-    return $head + $tail
-}
-
 function Uninstall-MsiexecAppByName {
     param([Parameter(Mandatory = $true)][string]$Name)
 
@@ -161,8 +114,6 @@ if (-not (Test-EdgeInstalled)) {
 }
 
 $uninstallInfo = Get-EdgeUninstallInfo
-$policyAcl = $null
-$policyPatched = $false
 $msiChecked = $false
 
 try {
@@ -188,20 +139,13 @@ try {
         Remove-ItemProperty -Path $uninstallInfo.Key -Name experiment_control_labels -ErrorAction SilentlyContinue
     }
 
-    if (Test-Path $policyBackup) {
-        Remove-Item -Path $policyBackup -Force -ErrorAction SilentlyContinue
+    # Create a dummy legacy UWP Edge file to unlock the Chromium Edge uninstaller (WinUtil method)
+    if (-not (Test-Path $dummyEdgePath)) {
+        New-Item -Path $dummyEdgePath -ItemType Directory -Force | Out-Null
     }
-
-    if (Test-Path $policyFile) {
-        $policyAcl = Grant-AdminWriteAccess -Path $policyFile
-        Rename-Item -Path $policyFile -NewName (Split-Path $policyBackup -Leaf) -Force
-
-        $policyContent = Get-Content -Path $policyBackup -Raw -Encoding UTF8
-        $patchedContent = Get-PatchedRegionPolicyContent -Content $policyContent
-        Set-Content -Path $policyFile -Value $patchedContent -Encoding UTF8
-
-        $policyPatched = $true
-        Write-Host "    Policy file   : Edge uninstall gate patched"
+    if (-not (Test-Path $dummyEdgeExe)) {
+        New-Item -Path $dummyEdgeExe -ItemType File -Force | Out-Null
+        Write-Host "    Dummy UWP file : created to unlock Edge uninstaller"
     }
 
     Uninstall-MsiexecAppByName -Name 'Microsoft Edge'
@@ -237,23 +181,14 @@ try {
     }
 } catch {
     Write-Host "    [WARNING] Edge uninstall hit an error: $($_.Exception.Message)" -ForegroundColor Yellow
-} finally {
-    if ($policyPatched -and (Test-Path $policyBackup)) {
-        Remove-Item -Path $policyFile -Force -ErrorAction SilentlyContinue
-        Rename-Item -Path $policyBackup -NewName (Split-Path $policyFile -Leaf) -Force -ErrorAction SilentlyContinue
-    }
-
-    if ($policyAcl) {
-        Restore-OriginalAcl -Path $policyFile -Acl $policyAcl
-    }
 }
 
 if (Test-EdgeInstalled) {
-    Write-Host "    [WARNING] Edge is still present after the EdgeRemover-style uninstall flow." -ForegroundColor Yellow
+    Write-Host "    [WARNING] Edge is still present after the uninstall flow." -ForegroundColor Yellow
     if (-not $msiChecked) {
         Write-Host "              MSI-based uninstall was not attempted." -ForegroundColor Yellow
     }
-    Write-Host "              Current next step is to inspect the exact uninstall string and package state on the VM." -ForegroundColor Yellow
+    Write-Host "              You can retry removal manually from Settings > Apps." -ForegroundColor Yellow
 } else {
     Remove-EdgeShortcuts
 

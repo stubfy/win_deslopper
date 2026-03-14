@@ -1,5 +1,12 @@
 # restore\opt_edge_restore.ps1 - Reinstall Microsoft Edge
 
+# Remove dummy UWP Edge file created by the uninstall flow
+$dummyEdgePath = "$env:SystemRoot\SystemApps\Microsoft.MicrosoftEdge_8wekyb3d8bbwe"
+if (Test-Path $dummyEdgePath) {
+    Remove-Item -Path $dummyEdgePath -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Host "    Dummy UWP file : removed."
+}
+
 # Remove reinstallation block
 $noEdge = 'HKLM:\SOFTWARE\Microsoft\EdgeUpdate'
 if (Test-Path $noEdge) {
