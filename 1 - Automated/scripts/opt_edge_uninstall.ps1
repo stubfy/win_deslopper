@@ -313,12 +313,44 @@ function Invoke-WebView2Setup {
     return $proc
 }
 
+function Remove-WebView2AppxPackage {
+    # Win32WebViewHost is the AppX package that delivers WebView2 on Windows 11.
+    # It is marked non-removable by default; DISM can unlock it, then Remove-AppxPackage works.
+    $packages = Get-AppxPackage -AllUsers -Name '*Win32WebViewHost*' -ErrorAction SilentlyContinue
+    if (-not $packages) { return }
+
+    foreach ($pkg in $packages) {
+        Write-Host "    AppX found     : $($pkg.PackageFullName)"
+
+        # Unlock via DISM (set-nonremovableapppolicy)
+        $dismArgs = "/online /set-nonremovableapppolicy /packagefamily:$($pkg.PackageFamilyName) /nonremovable:0"
+        $dismProc = Start-Process -FilePath dism.exe -ArgumentList $dismArgs -Wait -PassThru -WindowStyle Hidden -ErrorAction SilentlyContinue
+        if ($dismProc.ExitCode -eq 0) {
+            Write-Host "    DISM unlock    : OK"
+        } else {
+            Write-Host "    DISM unlock    : exit $($dismProc.ExitCode)" -ForegroundColor Yellow
+        }
+
+        # Remove provisioned package (prevents reinstall on new user profiles)
+        $prov = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue |
+            Where-Object { $_.DisplayName -like '*Win32WebViewHost*' }
+        foreach ($p in $prov) {
+            Remove-AppxProvisionedPackage -PackageName $p.PackageName -Online -AllUsers -ErrorAction SilentlyContinue | Out-Null
+            Write-Host "    Deprovisioned  : $($p.PackageName)"
+        }
+
+        # Remove the package itself
+        Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction SilentlyContinue
+        Write-Host "    AppX removed   : $($pkg.PackageFullName)"
+    }
+}
+
 function Uninstall-WebView2 {
     # Kill lingering WebView2 and EdgeUpdate processes before attempting
     Get-Process -Name @('msedgewebview2', 'MicrosoftEdgeUpdate') -ErrorAction SilentlyContinue |
         Stop-Process -Force -ErrorAction SilentlyContinue
 
-    # Same registry unlocks as the Edge flow: without these, setup.exe exits 93
+    # Same registry unlocks as the Edge flow
     foreach ($key in $edgeUpdateDevKeys) {
         if (-not (Test-Path $key)) { New-Item -Path $key -Force | Out-Null }
         Set-ItemProperty -Path $key -Name AllowUninstall -Value '' -Type String -Force
@@ -329,16 +361,16 @@ function Uninstall-WebView2 {
         }
     }
 
-    $tried = $false
-
     try {
-        $uninstallInfo = Get-WebView2UninstallInfo
+        # Step 1: Remove the Win32WebViewHost AppX package via DISM (the actual lock on Windows 11)
+        Remove-WebView2AppxPackage
 
+        # Step 2: Run setup.exe to clean up the Win32 installation
+        $uninstallInfo = Get-WebView2UninstallInfo
         if ($uninstallInfo) {
             $raw   = $uninstallInfo.UninstallString
             $scope = if ($uninstallInfo.Key -like '*HKEY_CURRENT_USER*') { '--user-level' } else { '--system-level' }
 
-            # Extract setup.exe path cleanly and call it directly (avoids cmd.exe quoting issues)
             $setupExe = $null
             if ($raw -match '^"([^"]+)"') {
                 $setupExe = $Matches[1]
@@ -350,11 +382,11 @@ function Uninstall-WebView2 {
                 Write-Host "    Launching WebView2 uninstall..."
                 $proc = Invoke-WebView2Setup -SetupExe $setupExe -Scope $scope
                 Write-Host "    Exit code      : $($proc.ExitCode)"
-                $tried = $true
             }
         }
 
-        if (-not $tried -or (Test-WebView2Installed)) {
+        # Step 3: Filesystem fallback for any remaining setup.exe
+        if (Test-WebView2Installed) {
             foreach ($setup in Get-WebView2SetupCandidates) {
                 $scope = if ($setup.FullName -like "$env:LOCALAPPDATA*") { '--user-level' } else { '--system-level' }
 
@@ -362,28 +394,14 @@ function Uninstall-WebView2 {
                 $proc = Invoke-WebView2Setup -SetupExe $setup.FullName -Scope $scope
                 Write-Host "    Exit code      : $($proc.ExitCode)"
 
-                if (-not (Test-WebView2Installed)) {
-                    break
-                }
-            }
-        }
-
-        # On Windows 11 25H2, WebView2 is a system component — setup.exe refuses (exit 93).
-        # winget is the only remaining option before giving up.
-        if (Test-WebView2Installed) {
-            $winget = Get-Command winget -ErrorAction SilentlyContinue
-            if ($winget) {
-                Write-Host "    Trying winget uninstall..."
-                & winget uninstall --id Microsoft.EdgeWebView2Runtime --silent --force --accept-source-agreements 2>&1 | Out-Null
-                Write-Host "    winget exit    : $LASTEXITCODE"
+                if (-not (Test-WebView2Installed)) { break }
             }
         }
     } catch {
         Write-Host "    [WARNING] WebView2 uninstall hit an error: $($_.Exception.Message)" -ForegroundColor Yellow
     }
 
-    # Apply reinstall block regardless of whether uninstall succeeded.
-    # On Windows 11 25H2, WebView2 may be OS-protected — blocking policy is the effective mitigation.
+    # Apply reinstall block regardless of whether uninstall succeeded
     if (-not (Test-Path $webView2BlockPolicyPath)) {
         New-Item -Path $webView2BlockPolicyPath -Force | Out-Null
     }
@@ -391,15 +409,13 @@ function Uninstall-WebView2 {
     Set-ItemProperty -Path $webView2BlockPolicyPath -Name $webView2UpdatePolicy -Value 0 -Type DWord -Force
 
     if (Test-WebView2Installed) {
-        Write-Host "    [WARNING] WebView2 Runtime is still present." -ForegroundColor Yellow
-        Write-Host "              On Windows 11 25H2 it is an OS-protected component; setup.exe removal is blocked by design." -ForegroundColor DarkGray
-        Write-Host "              Reinstall policy has been applied. Processes were killed." -ForegroundColor DarkGray
+        Write-Host "    [WARNING] WebView2 Runtime is still present after the uninstall flow." -ForegroundColor Yellow
+        Write-Host "              You may need to retry after a reboot." -ForegroundColor Yellow
         return $false
     }
 
     Write-Host "    WebView2 removed: Microsoft Edge WebView2 Runtime is no longer detected."
-    Write-Host "    Reinstall block: best-effort EdgeUpdate policy values applied."
-    Write-Host "    Note           : Windows 11 or WebView2-dependent apps may still bring it back." -ForegroundColor DarkGray
+    Write-Host "    Reinstall block: EdgeUpdate policy values applied."
     return $true
 }
 
