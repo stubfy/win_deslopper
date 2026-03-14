@@ -10,6 +10,7 @@ check_updates.bat
 
 # Instructions internes Claude Code
 CLAUDE.md
+AGENTS.md
 
 # Logs locaux
 *.log
