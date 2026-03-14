@@ -31,6 +31,10 @@ $webView2ClientKeys = @(
 $webView2BlockPolicyPath = 'HKLM:\SOFTWARE\Policies\Microsoft\EdgeUpdate'
 $webView2InstallPolicy   = "Install$webView2AppGuid"
 $webView2UpdatePolicy    = "Update$webView2AppGuid"
+$webView2UninstallKeys   = @(
+    'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft EdgeWebView'
+    'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft EdgeWebView'
+)
 
 function Get-UninstallEntries {
     $paths = @(
@@ -313,6 +317,17 @@ function Uninstall-WebView2 {
     # Kill lingering WebView2 and EdgeUpdate processes before attempting
     Get-Process -Name @('msedgewebview2', 'MicrosoftEdgeUpdate') -ErrorAction SilentlyContinue |
         Stop-Process -Force -ErrorAction SilentlyContinue
+
+    # Same registry unlocks as the Edge flow: without these, setup.exe exits 93
+    foreach ($key in $edgeUpdateDevKeys) {
+        if (-not (Test-Path $key)) { New-Item -Path $key -Force | Out-Null }
+        Set-ItemProperty -Path $key -Name AllowUninstall -Value '' -Type String -Force
+    }
+    foreach ($key in $webView2UninstallKeys) {
+        if (Test-Path $key) {
+            Set-ItemProperty -Path $key -Name NoRemove -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        }
+    }
 
     $tried = $false
 
