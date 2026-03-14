@@ -352,21 +352,35 @@ function Uninstall-WebView2 {
                 }
             }
         }
+
+        # On Windows 11 25H2, WebView2 is a system component — setup.exe refuses (exit 93).
+        # winget is the only remaining option before giving up.
+        if (Test-WebView2Installed) {
+            $winget = Get-Command winget -ErrorAction SilentlyContinue
+            if ($winget) {
+                Write-Host "    Trying winget uninstall..."
+                & winget uninstall --id Microsoft.EdgeWebView2Runtime --silent --force --accept-source-agreements 2>&1 | Out-Null
+                Write-Host "    winget exit    : $LASTEXITCODE"
+            }
+        }
     } catch {
         Write-Host "    [WARNING] WebView2 uninstall hit an error: $($_.Exception.Message)" -ForegroundColor Yellow
     }
 
-    if (Test-WebView2Installed) {
-        Write-Host "    [WARNING] WebView2 Runtime is still present after the uninstall flow." -ForegroundColor Yellow
-        Write-Host "              Windows 11 or apps that depend on WebView2 can reinstall it." -ForegroundColor Yellow
-        return $false
-    }
-
+    # Apply reinstall block regardless of whether uninstall succeeded.
+    # On Windows 11 25H2, WebView2 may be OS-protected — blocking policy is the effective mitigation.
     if (-not (Test-Path $webView2BlockPolicyPath)) {
         New-Item -Path $webView2BlockPolicyPath -Force | Out-Null
     }
     Set-ItemProperty -Path $webView2BlockPolicyPath -Name $webView2InstallPolicy -Value 0 -Type DWord -Force
     Set-ItemProperty -Path $webView2BlockPolicyPath -Name $webView2UpdatePolicy -Value 0 -Type DWord -Force
+
+    if (Test-WebView2Installed) {
+        Write-Host "    [WARNING] WebView2 Runtime is still present." -ForegroundColor Yellow
+        Write-Host "              On Windows 11 25H2 it is an OS-protected component; setup.exe removal is blocked by design." -ForegroundColor DarkGray
+        Write-Host "              Reinstall policy has been applied. Processes were killed." -ForegroundColor DarkGray
+        return $false
+    }
 
     Write-Host "    WebView2 removed: Microsoft Edge WebView2 Runtime is no longer detected."
     Write-Host "    Reinstall block: best-effort EdgeUpdate policy values applied."
