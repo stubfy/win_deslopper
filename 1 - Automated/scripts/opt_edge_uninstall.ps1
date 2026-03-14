@@ -1,4 +1,4 @@
-# opt_edge_uninstall.ps1 - Microsoft Edge uninstall (WinUtil-inspired method)
+# opt_edge_uninstall.ps1 - Microsoft Edge uninstall (WinUtil-aligned method)
 # OPTIONAL - called only if confirmed by the user in run_all.ps1
 
 $edgeRoots = @(
@@ -18,13 +18,8 @@ $edgeUpdateDevKeys = @(
     'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdateDev'
     'HKLM:\SOFTWARE\Microsoft\EdgeUpdateDev'
 )
-$geoPaths = @(
-    'Registry::HKEY_USERS\.DEFAULT\Control Panel\International\Geo'
-    'HKCU:\Control Panel\International\Geo'
-)
-$tempGeoNation = '68' # Ireland / EEA
 $policyFile = Join-Path $env:SystemRoot 'System32\IntegratedServicesRegionPolicySet.json'
-$policyTemp = "$policyFile.win_deslopper.bak"
+$policyBackup = "$policyFile.win_deslopper.bak"
 
 function Test-EdgeInstalled {
     foreach ($root in $edgeRoots) {
@@ -44,7 +39,7 @@ function Test-EdgeInstalled {
     return $false
 }
 
-function Get-EdgeUninstallCommand {
+function Get-EdgeUninstallMetadata {
     foreach ($key in $edgeClientStateKeys) {
         if (-not (Test-Path $key)) { continue }
 
@@ -56,13 +51,12 @@ function Get-EdgeUninstallCommand {
 
         if ($props.UninstallString) {
             $filePath = ([string]$props.UninstallString).Trim('"')
-            if (-not (Test-Path $filePath)) {
-                continue
-            }
-
-            return [PSCustomObject]@{
-                FilePath  = $filePath
-                Arguments = [string]$props.UninstallArguments
+            if (Test-Path $filePath) {
+                return [PSCustomObject]@{
+                    Key       = $key
+                    FilePath  = $filePath
+                    Arguments = [string]$props.UninstallArguments
+                }
             }
         }
     }
@@ -75,6 +69,7 @@ function Get-EdgeUninstallCommand {
                  Select-Object -First 1
         if ($setup) {
             return [PSCustomObject]@{
+                Key       = $null
                 FilePath  = $setup.FullName
                 Arguments = '--uninstall --msedge --system-level --force-uninstall --delete-profile'
             }
@@ -82,6 +77,32 @@ function Get-EdgeUninstallCommand {
     }
 
     return $null
+}
+
+function Get-JsonFileAclWritable {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $originalAcl = Get-Acl -Path $Path
+    $adminAccount = ([System.Security.Principal.SecurityIdentifier]'S-1-5-32-544').Translate([System.Security.Principal.NTAccount]).Value
+
+    $tempAcl = New-Object System.Security.AccessControl.FileSecurity
+    $tempAcl.SetSecurityDescriptorSddlForm($originalAcl.Sddl)
+    $tempAcl.SetOwner([System.Security.Principal.NTAccount]$adminAccount)
+    $tempAcl.SetAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($adminAccount, 'FullControl', 'Allow')))
+    Set-Acl -Path $Path -AclObject $tempAcl
+
+    return $originalAcl
+}
+
+function Restore-JsonFileAcl {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)]$Acl
+    )
+
+    if (Test-Path $Path) {
+        Set-Acl -Path $Path -AclObject $Acl -ErrorAction SilentlyContinue
+    }
 }
 
 function Remove-EdgeShortcuts {
@@ -105,101 +126,102 @@ if (-not (Test-EdgeInstalled)) {
     return
 }
 
-$uninstallCommand = Get-EdgeUninstallCommand
-if (-not $uninstallCommand) {
+$metadata = Get-EdgeUninstallMetadata
+if (-not $metadata) {
     Write-Host "    Unable to locate Edge uninstall metadata." -ForegroundColor Yellow
     return
 }
 
-$originalGeoNation = @{}
-foreach ($geoPath in $geoPaths) {
-    if (Test-Path $geoPath) {
-        try {
-            $originalGeoNation[$geoPath] = [string](Get-ItemProperty -Path $geoPath -Name Nation -ErrorAction Stop).Nation
-        } catch {}
-    }
-}
-
+$originalNoRemove = @{}
 $policyAcl = $null
-$policyMoved = $false
+$policyPatched = $false
 
 try {
     foreach ($procName in @('msedge', 'MicrosoftEdgeUpdate', 'widgets', 'msedgewebview2')) {
         Get-Process -Name $procName -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     }
 
-    foreach ($geoPath in $originalGeoNation.Keys) {
-        Set-ItemProperty -Path $geoPath -Name Nation -Value $tempGeoNation -Type String -Force
-    }
-    if ($originalGeoNation.Count -gt 0) {
-        Write-Host "    Region forced : Ireland (EEA) during Edge uninstall"
-    }
-
     foreach ($key in $edgeUpdateDevKeys) {
         if (-not (Test-Path $key)) {
             New-Item -Path $key -Force | Out-Null
         }
-        Set-ItemProperty -Path $key -Name AllowUninstall -Value 1 -Type DWord -Force
+
+        # WinUtil uses an empty string value here, not a DWORD.
+        Set-ItemProperty -Path $key -Name AllowUninstall -Value '' -Type String -Force
     }
 
     foreach ($key in $edgeUninstallKeys) {
-        if (Test-Path $key) {
-            Remove-ItemProperty -Path $key -Name NoRemove -ErrorAction SilentlyContinue
-        }
+        if (-not (Test-Path $key)) { continue }
+
+        try {
+            $props = Get-ItemProperty -Path $key -ErrorAction Stop
+            if ($null -ne $props.NoRemove) {
+                $originalNoRemove[$key] = [int]$props.NoRemove
+            }
+        } catch {}
+
+        Set-ItemProperty -Path $key -Name NoRemove -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
     }
 
-    if ((-not (Test-Path $policyFile)) -and (Test-Path $policyTemp)) {
-        Rename-Item -Path $policyTemp -NewName (Split-Path $policyFile -Leaf) -Force -ErrorAction SilentlyContinue
-    } elseif (Test-Path $policyTemp) {
-        Remove-Item -Path $policyTemp -Force -ErrorAction SilentlyContinue
+    if (Test-Path $policyBackup) {
+        Remove-Item -Path $policyBackup -Force -ErrorAction SilentlyContinue
     }
 
     if (Test-Path $policyFile) {
-        $policyAcl = Get-Acl -Path $policyFile
+        $policyAcl = Get-JsonFileAclWritable -Path $policyFile
+        Copy-Item -Path $policyFile -Destination $policyBackup -Force
 
-        $adminAccount = ([System.Security.Principal.SecurityIdentifier]'S-1-5-32-544').Translate([System.Security.Principal.NTAccount]).Value
-        $tempAcl = New-Object System.Security.AccessControl.FileSecurity
-        $tempAcl.SetSecurityDescriptorSddlForm($policyAcl.Sddl)
-        $tempAcl.SetOwner([System.Security.Principal.NTAccount]$adminAccount)
-        $tempAcl.SetAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($adminAccount, 'FullControl', 'Allow')))
-        Set-Acl -Path $policyFile -AclObject $tempAcl
+        $policyJson = Get-Content -Path $policyFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        foreach ($policy in $policyJson.policies) {
+            if ($policy.guid -eq '{1bca2783-0de6-4269-b2b2-4bfdd4e492e5}') {
+                $policy.defaultState = 'enabled'
+            }
+        }
 
-        Rename-Item -Path $policyFile -NewName (Split-Path $policyTemp -Leaf) -Force
-        $policyMoved = $true
-        Write-Host "    Policy file   : temporarily hidden during uninstall"
+        $policyJson | ConvertTo-Json -Depth 100 | Set-Content -Path $policyFile -Encoding UTF8
+        $policyPatched = $true
+        Write-Host "    Policy file   : Edge uninstall region gate patched"
     }
 
-    $filePath = $uninstallCommand.FilePath.Trim('"')
-    $argumentList = [string]$uninstallCommand.Arguments
-    if ($argumentList -notmatch '(?i)--force-uninstall') {
-        $argumentList = ($argumentList + ' --force-uninstall').Trim()
-    }
-    if ($argumentList -notmatch '(?i)--delete-profile') {
-        $argumentList = ($argumentList + ' --delete-profile').Trim()
+    if ($metadata.Key) {
+        Remove-ItemProperty -Path $metadata.Key -Name experiment_control_labels -ErrorAction SilentlyContinue
     }
 
+    $arguments = [string]$metadata.Arguments
+    if ($arguments -notmatch '(?i)--force-uninstall') {
+        $arguments = ($arguments + ' --force-uninstall').Trim()
+    }
+    if ($arguments -notmatch '(?i)--delete-profile') {
+        $arguments = ($arguments + ' --delete-profile').Trim()
+    }
+
+    # WinUtil uses cmd /c start /wait so the Edge bootstrapper behaves like an interactive uninstall.
+    $escaped = '"' + $metadata.FilePath.Replace('"', '\"') + '" ' + $arguments
     Write-Host "    Launching Edge uninstall..."
-    $proc = Start-Process -FilePath $filePath -ArgumentList $argumentList -Wait -PassThru -WindowStyle Hidden -ErrorAction Stop
+    $proc = Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" `
+        -ArgumentList "/c start /wait `"EdgeUninstall`" $escaped" `
+        -Wait -PassThru -WindowStyle Hidden -ErrorAction Stop
     Write-Host "    Exit code      : $($proc.ExitCode)"
 } catch {
     Write-Host "    [WARNING] Edge uninstall hit an error: $($_.Exception.Message)" -ForegroundColor Yellow
 } finally {
-    if ($policyMoved -and (Test-Path $policyTemp)) {
-        Rename-Item -Path $policyTemp -NewName (Split-Path $policyFile -Leaf) -Force -ErrorAction SilentlyContinue
+    if ($policyPatched -and (Test-Path $policyBackup)) {
+        Copy-Item -Path $policyBackup -Destination $policyFile -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $policyBackup -Force -ErrorAction SilentlyContinue
     }
 
-    if ($policyAcl -and (Test-Path $policyFile)) {
-        Set-Acl -Path $policyFile -AclObject $policyAcl -ErrorAction SilentlyContinue
+    if ($policyAcl) {
+        Restore-JsonFileAcl -Path $policyFile -Acl $policyAcl
     }
 
-    foreach ($geoPath in $originalGeoNation.Keys) {
-        Set-ItemProperty -Path $geoPath -Name Nation -Value $originalGeoNation[$geoPath] -Type String -Force -ErrorAction SilentlyContinue
+    foreach ($key in $originalNoRemove.Keys) {
+        Set-ItemProperty -Path $key -Name NoRemove -Value $originalNoRemove[$key] -Type DWord -Force -ErrorAction SilentlyContinue
     }
 }
 
 if (Test-EdgeInstalled) {
-    Write-Host "    [WARNING] Edge is still present after the WinUtil-style uninstall flow." -ForegroundColor Yellow
-    Write-Host "              Edge has been unlocked for removal, so retrying from Settings may now work." -ForegroundColor Yellow
+    Write-Host "    [WARNING] Edge is still present after the WinUtil-aligned uninstall flow." -ForegroundColor Yellow
+    Write-Host "              The uninstall gate was opened correctly; retrying from Settings may now work." -ForegroundColor Yellow
 } else {
     Remove-EdgeShortcuts
 
