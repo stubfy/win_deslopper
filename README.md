@@ -52,7 +52,7 @@ Everything scriptable is automated in a single pass. The rest is guided by `read
 
 You will be prompted for a few options before anything runs:
 - **Windows Update profile** (Maximum / Security only / Disabled), default: Security only
-- **Uninstall Edge (WinUtil dummy-file method)** (optional), default: Yes
+- **Uninstall Edge + WebView2 Runtime** (optional, best-effort), default: Yes
 - **Uninstall OneDrive** (optional), default: Yes
 - **Disable Windows Firewall profiles** (optional), default: Yes
 
@@ -173,6 +173,7 @@ Restores in order:
 - AI/Recall keys (deleted)
 - Windows Update (restored to Maximum / Windows default)
 - Windows Firewall profiles (restored to saved state or Windows default)
+- Optional reinstall prompt for Microsoft Edge + WebView2 Runtime / OneDrive
 
 > **Limitation** : Removed UWP apps are not restored automatically. The `10_debloat_restore.ps1` script provides Store reinstall commands.
 
@@ -192,7 +193,7 @@ win_deslopper/
 │   │   ├── run_all.ps1               Main PowerShell launcher
 │   │   ├── restore_all.ps1           Full rollback launcher
 │   │   ├── 01_backup.ps1 ... 18_*   Scripts by category
-│   │   └── opt_*.ps1                 Optional (Edge, OneDrive removal)
+│   │   └── opt_*.ps1                 Optional (Edge/WebView2, OneDrive removal)
 │   ├── restore/                      Symmetric rollback scripts
 │   ├── tools/                        Third-party tools
 │   │   ├── OOSU10.exe
@@ -219,7 +220,7 @@ win_deslopper/
 | | Risk |
 |-|------|
 | **Defender disabled** | No real-time antivirus protection. On 25H2, Tamper Protection may block disabling even in Safe Mode. |
-| **Edge uninstall** | Uses the current WinUtil-style dummy-file flow: a temporary legacy Edge file is created to unlock the official Chromium Edge uninstaller. |
+| **Edge / WebView2 uninstall** | Uses the current WinUtil-style dummy-file flow for Edge, then tries to remove the WebView2 Runtime. On Windows 11 or with apps that depend on WebView2, the runtime can come back later. |
 | **VBS/HVCI disabled** | Credential Guard and certain memory protections are off. Significant performance gain, notable security trade-off. |
 | **MSI Utils** | Do not enable MSI on audio controllers, capture cards (ELGATO) or legacy USB - BSOD risk. |
 | **Interrupt Affinity** | Wrong pinning can increase latency instead of reducing it. Identify the correct PCI bridge before any change. |

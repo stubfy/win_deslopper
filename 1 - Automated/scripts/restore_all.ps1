@@ -99,9 +99,9 @@ Write-Host "    (Microsoft\Windows\Customer Experience Improvement Program, etc.
 
 # Conditional Edge / OneDrive options
 Write-Host ""
-$restoreEdge = Read-Host "Reinstall Microsoft Edge? (Y/N)"
+$restoreEdge = Read-Host "Reinstall Microsoft Edge + WebView2 Runtime? (Y/N)"
 if ($restoreEdge -ieq 'Y') {
-    Write-Step "OPTION - Reinstall Microsoft Edge"
+    Write-Step "OPTION - Reinstall Microsoft Edge + WebView2 Runtime"
     Invoke-Script "$RESTORE\opt_edge_restore.ps1"
 }
 
