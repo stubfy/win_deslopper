@@ -82,6 +82,9 @@ Invoke-Script "$RESTORE\14_network_tweaks.ps1"
 Write-Step "Restore Windows Update (maximum mode - Windows default)"
 Invoke-Script "$RESTORE\15_windows_update.ps1"
 
+Write-Step "Restore Windows Firewall profiles"
+Invoke-Script "$RESTORE\18_firewall.ps1"
+
 Write-Step "Restore UWT equivalent tweaks"
 Invoke-Script "$RESTORE\16_uwt.ps1"
 

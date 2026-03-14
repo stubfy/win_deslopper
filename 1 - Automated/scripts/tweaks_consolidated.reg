@@ -187,11 +187,11 @@ Windows Registry Editor Version 5.00
 [HKEY_CURRENT_USER\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\Bags\AllFolders\Shell]
 "FolderType"="NotSpecified"
 
-; --- Activer Storage Sense (nettoyage auto fichiers temp + corbeille) ---
+; --- Desactiver Storage Sense (pas de nettoyage auto en arriere-plan) ---
 [HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy]
-"01"=dword:00000001
-"04"=dword:00000001
-"08"=dword:00000001
+"01"=dword:00000000
+"04"=dword:00000000
+"08"=dword:00000000
 
 ; --- Desactiver Multiplane Overlay (MPO) - reduit stutters/flickering GPU ---
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Dwm]

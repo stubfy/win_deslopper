@@ -25,12 +25,40 @@ Windows Registry Editor Version 5.00
 
 [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
 "HideNewAppNotification"=dword:00000000
+"ShowSecondsInSystemClock"=dword:00000000
+"TaskbarAnimations"=dword:00000001
+"ListviewAlphaSelect"=dword:00000001
+"ListviewShadow"=dword:00000001
 
 [HKEY_CURRENT_USER\Software\Microsoft\Windows\DWM]
 "ColorPrevalence"=dword:00000000
+"ColorizationColor"=-
 
 [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize]
+"AppsUseLightTheme"=dword:00000001
+"SystemUsesLightTheme"=dword:00000001
+"ColorPrevalence"=dword:00000000
 "EnableTransparency"=dword:00000001
+
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent]
+"StartColorMenu"=-
+"AccentColorMenu"=-
+
+[HKEY_CURRENT_USER\Control Panel\Keyboard]
+"PrintScreenKeyForSnippingEnabled"=-
+
+[HKEY_CURRENT_USER\Software\Microsoft\ScreenMagnifier]
+"RunningState"=dword:00000000
+
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects]
+"VisualFXSetting"=dword:00000000
+
+[HKEY_CURRENT_USER\Control Panel\Desktop]
+"DragFullWindows"="1"
+"FontSmoothing"="2"
+
+[HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics]
+"MinAnimate"="1"
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Defender Security Center\Systray]
 "HideSystray"=dword:00000000
@@ -79,6 +107,16 @@ Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DataCollection]
 "DoNotShowFeedbackNotifications"=-
+
+[HKEY_CURRENT_USER\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\QuietHours]
+"Enable"=-
+
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement]
+"ScoobeSystemSettingEnabled"=-
+
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager]
+"SoftLandingEnabled"=dword:00000001
+"SubscribedContent-338389Enabled"=-
 
 [HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo]
 "Enabled"=dword:00000001

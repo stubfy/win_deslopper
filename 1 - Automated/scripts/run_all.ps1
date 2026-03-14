@@ -173,10 +173,13 @@ Invoke-Script "$SCRIPTS\14_network_tweaks.ps1"
 Write-Step "PHASE B.14 - Windows Update profile: $profilLabel"
 & "$SCRIPTS\15_windows_update.ps1" -Profil $updateProfil
 
-Write-Step "PHASE B.15 - UWT equivalent tweaks (appearance, privacy, context menu)"
+Write-Step "PHASE B.15 - Disable Windows Firewall profiles"
+Invoke-Script "$SCRIPTS\18_firewall.ps1"
+
+Write-Step "PHASE B.16 - UWT equivalent tweaks (appearance, privacy, context menu)"
 Invoke-Script "$SCRIPTS\16_uwt.ps1"
 
-Write-Step "PHASE B.16 - MarkC mouse acceleration fix (1:1 scaling)"
+Write-Step "PHASE B.17 - MarkC mouse acceleration fix (1:1 scaling)"
 Invoke-Script "$SCRIPTS\17_mouse_accel.ps1"
 
 # ── OPTIONS: physical uninstalls ──────────────────────────────────────────────
@@ -203,13 +206,12 @@ Write-Host ""
 Write-Host "REMAINING MANUAL STEPS (see README.md at the pack root):" -ForegroundColor Cyan
 Write-Host "  1. Reboot the PC"
 Write-Host "  2. [Safe Mode] Disable Windows Defender      (2 - Windows Defender/)"
-Write-Host "  3. Control Panel settings                    (3 - Control Panel/)"
-Write-Host "  4. MSI Utils - enable MSI on GPU/NIC/NVMe   (4 - MSI Utils/)"
-Write-Host "  5. NVIDIA Profile Inspector - per-game       (5 - NVInspector/)"
-Write-Host "  6. Device Manager - disable USB power saving (6 - Gestionnaire/)"
-Write-Host "  7. Interrupt Affinity - pin GPU IRQ to core  (7 - Interrupt Affinity/)"
-Write-Host "  8. NIC settings - disable offloads, buffers  (8 - Network WIP/)"
-Write-Host "  9. Verify timer: run MeasureSleep.exe        (1 - Automated/tools/)"
+Write-Host "  3. MSI Utils - enable MSI on GPU/NIC/NVMe   (3 - MSI Utils/)"
+Write-Host "  4. NVIDIA Profile Inspector - per-game       (4 - NVInspector/)"
+Write-Host "  5. Device Manager - disable USB power saving (5 - Gestionnaire/)"
+Write-Host "  6. Interrupt Affinity - pin GPU IRQ to core  (6 - Interrupt Affinity/)"
+Write-Host "  7. NIC settings - disable offloads, buffers  (7 - Network WIP/)"
+Write-Host "  8. Verify timer: run MeasureSleep.exe        (1 - Automated/tools/)"
 Write-Host ""
 Write-Host "To undo all tweaks: .\restore_all.ps1" -ForegroundColor Gray
 Write-Host ""

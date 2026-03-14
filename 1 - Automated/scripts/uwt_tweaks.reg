@@ -32,14 +32,49 @@ Windows Registry Editor Version 5.00
 ; --- Suppress "New apps installed" toast notification ---
 [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
 "HideNewAppNotification"=dword:00000001
+"ShowSecondsInSystemClock"=dword:00000001
+"TaskbarAnimations"=dword:00000000
+"ListviewAlphaSelect"=dword:00000000
+"ListviewShadow"=dword:00000000
 
 ; --- Accent color on title bars and window borders ---
 [HKEY_CURRENT_USER\Software\Microsoft\Windows\DWM]
 "ColorPrevalence"=dword:00000001
+"ColorizationColor"=dword:c4000000
+
+; --- Dark mode + no accent on taskbar/start ---
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize]
+"AppsUseLightTheme"=dword:00000000
+"SystemUsesLightTheme"=dword:00000000
+"ColorPrevalence"=dword:00000000
 
 ; --- Disable transparency effects ---
 [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize]
 "EnableTransparency"=dword:00000000
+
+; --- Force a black accent tone for shell/UI surfaces ---
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent]
+"StartColorMenu"=dword:ff000000
+"AccentColorMenu"=dword:ff000000
+
+; --- Print Screen opens Snipping Tool ---
+[HKEY_CURRENT_USER\Control Panel\Keyboard]
+"PrintScreenKeyForSnippingEnabled"=dword:00000001
+
+; --- Magnifier off ---
+[HKEY_CURRENT_USER\Software\Microsoft\ScreenMagnifier]
+"RunningState"=dword:00000000
+
+; --- Visual Effects preset marker ---
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects]
+"VisualFXSetting"=dword:00000003
+
+[HKEY_CURRENT_USER\Control Panel\Desktop]
+"DragFullWindows"="0"
+"FontSmoothing"="2"
+
+[HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics]
+"MinAnimate"="0"
 
 ; --- Hide Windows Defender Security Center tray icon ---
 ; (different from DisableNotifications already in tweaks_consolidated.reg)
@@ -102,6 +137,19 @@ Windows Registry Editor Version 5.00
 ; --- Disable feedback notifications (DataCollection key exists from tweaks_consolidated.reg) ---
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DataCollection]
 "DoNotShowFeedbackNotifications"=dword:00000001
+
+; --- Notifications page: keep global notifications, but disable Do Not Disturb / Focus activation paths ---
+[HKEY_CURRENT_USER\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\QuietHours]
+"Enable"=dword:00000001
+
+; --- Additional settings: stop "finish setting up this device" nudges ---
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement]
+"ScoobeSystemSettingEnabled"=dword:00000000
+
+; --- Additional settings: stop tips and suggestions while using Windows ---
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager]
+"SoftLandingEnabled"=dword:00000000
+"SubscribedContent-338389Enabled"=dword:00000000
 
 ; --- Disable Advertising ID ---
 [HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo]

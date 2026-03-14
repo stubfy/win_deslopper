@@ -36,6 +36,18 @@ foreach ($svc in $services) {
 $serviceState | ConvertTo-Json | Set-Content "$BACKUP_DIR\services_state.json" -Encoding UTF8
 Write-Host "    Service states saved -> backup\services_state.json"
 
+# Export firewall profile states (for precise rollback)
+$firewallState = @{}
+try {
+    foreach ($profile in Get-NetFirewallProfile -ErrorAction Stop) {
+        $firewallState[$profile.Name] = [bool]$profile.Enabled
+    }
+    $firewallState | ConvertTo-Json | Set-Content "$BACKUP_DIR\firewall_state.json" -Encoding UTF8
+    Write-Host "    Firewall states saved -> backup\firewall_state.json"
+} catch {
+    Write-Host "    [WARNING] Unable to save firewall profile states." -ForegroundColor Yellow
+}
+
 # Export modified registry keys
 $regExports = @{
     'HKLM_Control'           = 'HKLM\SYSTEM\CurrentControlSet\Control'

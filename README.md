@@ -59,7 +59,7 @@ Estimated duration: 5 to 15 minutes. A reboot prompt is shown at the end.
 
 **2. Reboot**
 
-**3. Follow the manual steps in order (folders 2 to 10)**
+**3. Follow the manual steps in order (folders 2 to 7, then `Tools/`)**
 
 Each folder contains a `readme.txt` with detailed instructions.
 
@@ -88,6 +88,7 @@ Each folder contains a `readme.txt` with detailed instructions.
 | `15_windows_update.ps1` | Windows Update profile (Maximum / Security / Disabled) |
 | `16_uwt.ps1` | UWT-equivalent tweaks (appearance, privacy, context menu) |
 | `17_mouse_accel.ps1` | MarkC mouse acceleration fix (auto-detects DPI scaling) |
+| `18_firewall.ps1` | Windows Firewall profiles disabled |
 
 ### Windows Update profiles
 
@@ -141,14 +142,12 @@ To be done in order after rebooting. Each folder contains a `readme.txt` with fu
 | # | Folder | Why manual | Risk level |
 |---|--------|-----------|------------|
 | 2 | **Windows Defender** | Requires Safe Mode - services protected by PPL in normal mode | High |
-| 3 | **Control Panel** | ms-settings shortcuts, settings not exposed via CLI | Low |
-| 4 | **MSI Utils** | Manual identification of compatible devices required | Moderate |
-| 5 | **NVInspector** | Per-game NVIDIA driver profiles, user-specific | Low |
-| 6 | **Device Manager** | USB power saving per device node, not cleanly scriptable | Low |
-| 7 | **Interrupt Affinity** | GPU PCI bridge identification required | Moderate |
-| 8 | **Network WIP** | NIC settings depend on adapter model | Moderate |
-
-| 9 | **Tools** | Complementary tools (Autoruns, temp folders) | Low |
+| 3 | **MSI Utils** | Manual identification of compatible devices required | Moderate |
+| 4 | **NVInspector** | Per-game NVIDIA driver profiles, user-specific | Low |
+| 5 | **Device Manager** | USB power saving per device node, not cleanly scriptable | Low |
+| 6 | **Interrupt Affinity** | GPU PCI bridge identification required | Moderate |
+| 7 | **Network WIP** | NIC settings depend on adapter model | Moderate |
+| 8 | **Tools** | Complementary tools (Autoruns, temp folders) | Low |
 
 ---
 
@@ -170,6 +169,7 @@ Restores in order:
 - USB selective suspend (restored)
 - AI/Recall keys (deleted)
 - Windows Update (restored to Maximum / Windows default)
+- Windows Firewall profiles (restored to saved state or Windows default)
 
 > **Limitation** : Removed UWP apps are not restored automatically. The `10_debloat_restore.ps1` script provides Store reinstall commands.
 
@@ -188,7 +188,7 @@ win_deslopper/
 │   ├── scripts/
 │   │   ├── run_all.ps1               Main PowerShell launcher
 │   │   ├── restore_all.ps1           Full rollback launcher
-│   │   ├── 01_backup.ps1 ... 17_*   Scripts by category
+│   │   ├── 01_backup.ps1 ... 18_*   Scripts by category
 │   │   └── opt_*.ps1                 Optional (Edge, OneDrive removal)
 │   ├── restore/                      Symmetric rollback scripts
 │   ├── tools/                        Third-party tools
@@ -199,12 +199,11 @@ win_deslopper/
 │   └── backup/                       Created at first run (gitignored)
 │
 ├── 2 - Windows Defender/
-├── 3 - Control Panel/
-├── 4 - MSI Utils/
-├── 5 - NVInspector/
-├── 6 - Gestionnaire/
-├── 7 - Interrupt Affinity/
-├── 8 - Network WIP/
+├── 3 - MSI Utils/
+├── 4 - NVInspector/
+├── 5 - Gestionnaire/
+├── 6 - Interrupt Affinity/
+├── 7 - Network WIP/
 └── Tools/
 ```
 
@@ -222,6 +221,7 @@ win_deslopper/
 | **Interrupt Affinity** | Wrong pinning can increase latency instead of reducing it. Identify the correct PCI bridge before any change. |
 | **Disabled services** | Print Spooler disabled = printing broken. DPS disabled = no system diagnostics. |
 | **WU Disabled profile** | No security patches, only use on isolated gaming machines. |
+| **Firewall disabled** | No Windows firewall filtering. Use only if another firewall or isolated setup covers the machine. |
 
 ---
 

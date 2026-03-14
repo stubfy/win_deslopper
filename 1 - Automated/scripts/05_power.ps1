@@ -27,6 +27,11 @@ if ($planGuid) {
     powercfg /setactive $planGuid 2>&1 | Out-Null
     Write-Host "    CPU frequency scaling policy: Rocket (5000)"
 
+    # Never sleep on AC or battery for the active Ultimate Performance plan
+    powercfg /change standby-timeout-ac 0 2>&1 | Out-Null
+    powercfg /change standby-timeout-dc 0 2>&1 | Out-Null
+    Write-Host "    Sleep disabled on AC and battery"
+
     # Disable hibernation (removes hiberfil.sys, frees disk space)
     powercfg -h off 2>&1 | Out-Null
     Write-Host "    Hibernation disabled (hiberfil.sys removed)"
