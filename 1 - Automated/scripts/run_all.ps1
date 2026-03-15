@@ -41,7 +41,7 @@
         a. Sets safeboot=minimal in BCD.
         b. Creates a helper .bat on the Desktop that disables Defender and
            removes the safeboot flag before rebooting to normal Windows.
-      This automates the Safe Mode Defender disable step (1 - Automated/scripts/19_defender_disable.ps1).
+      This automates the manual Safe Mode Defender step (2 - Windows Defender/run_defender.bat).
 
 .NOTES
     Manual steps after execution: see README.md at the pack root
@@ -49,7 +49,9 @@
 
 $ErrorActionPreference = 'Continue'
 $ROOT         = Split-Path (Split-Path $MyInvocation.MyCommand.Path)
+$PACK_ROOT    = Split-Path $ROOT -Parent
 $SCRIPTS      = Join-Path $ROOT "scripts"
+$DEFENDER_DIR = Join-Path $PACK_ROOT "2 - Windows Defender"
 $PACK_VERSION = 'v0.8'
 $LOG_DIR      = Join-Path $env:APPDATA 'win_deslopper\logs'
 $LOG_FILE     = Join-Path $LOG_DIR "win_deslopper.log"
@@ -262,7 +264,7 @@ Write-Host "================================================" -ForegroundColor G
 Write-Host ""
 Write-Host "REMAINING MANUAL STEPS (see README.md at the pack root):" -ForegroundColor Cyan
 Write-Host "  1. Reboot the PC"
-Write-Host "  2. [Safe Mode] Disable Windows Defender      (1 - Automated/scripts/19_defender_disable.ps1)"
+Write-Host "  2. [Safe Mode] Disable Windows Defender      (2 - Windows Defender/run_defender.bat)"
 Write-Host "  3. MSI Utils - enable MSI on GPU/NIC/NVMe   (3 - MSI Utils/)"
 Write-Host "  4. NVIDIA Profile Inspector - per-game       (4 - NVInspector/)"
 Write-Host "  5. Device Manager - disable USB power saving (5 - Gestionnaire/)"
@@ -288,63 +290,22 @@ if ($restart -eq '') { $restart = 'N' }
 if ($restart -ieq 'S') {
     Write-Log "Safe Mode reboot requested by user." 'INFO'
 
-    # Create an explicit Safe Mode helper on the Desktop
-    $batDest        = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Disable Defender and Return to Normal Mode.bat'
-    $defenderScript = Join-Path $SCRIPTS '19_defender_disable.ps1'
-    if (-not (Test-Path $defenderScript)) {
+    $defenderLauncher = Join-Path $DEFENDER_DIR 'run_defender.ps1'
+    if (-not (Test-Path $defenderLauncher)) {
         Write-Host ""
-        Write-Host "  ERROR: Defender script not found." -ForegroundColor Red
-        Write-Host "    Expected: $defenderScript" -ForegroundColor White
+        Write-Host "  ERROR: Defender launcher not found." -ForegroundColor Red
+        Write-Host "    Expected: $defenderLauncher" -ForegroundColor White
         Write-Host "  Safe Mode was not enabled." -ForegroundColor Yellow
-        Write-Log "Safe Mode helper creation failed: missing Defender script at $defenderScript" 'ERROR'
+        Write-Log "Safe Mode helper creation failed: missing launcher at $defenderLauncher" 'ERROR'
         return
     }
 
-    bcdedit /set '{current}' safeboot minimal | Out-Null
-
-    @"
-@echo off
-set "DEFENDER_SCRIPT=$defenderScript"
-echo.
-echo  =========================================================
-echo   win_deslopper -- Disable Defender and Return to Normal Mode
-echo  =========================================================
-echo.
-echo  This will:
-echo    1. Disable Windows Defender (6 services set to Start=4)
-echo    2. Remove Safe Boot flag
-echo    3. Reboot to normal Windows
-echo.
-if not exist "%DEFENDER_SCRIPT%" (
-echo  ERROR: missing Defender script:
-echo    %DEFENDER_SCRIPT%
-echo.
-pause
-exit /b 1
-)
-pause
-PowerShell -NoProfile -ExecutionPolicy Bypass -File "%DEFENDER_SCRIPT%"
-if errorlevel 1 (
-echo.
-echo  Defender script failed. Safe Boot was kept enabled.
-echo  Review the PowerShell error, then run this helper again.
-echo.
-pause
-exit /b 1
-)
-bcdedit /deletevalue {current} safeboot
-shutdown /r /t 0
-"@ | Set-Content -Path $batDest -Encoding ASCII
-
-    Write-Host ""
-    Write-Host "  Safe Mode is now configured." -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "  WHAT TO DO IN SAFE MODE:" -ForegroundColor Cyan
-    Write-Host "    Run the shortcut on your Desktop: 'Disable Defender and Return to Normal Mode.bat'" -ForegroundColor White
-    Write-Host "    (disables Defender, removes Safe Boot, reboots automatically)" -ForegroundColor DarkGray
-    Write-Host ""
-    Read-Host "  Press Enter to reboot into Safe Mode"
-    Restart-Computer -Force
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $defenderLauncher -CalledFromRunAll -LogFile $LOG_FILE
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host "  Defender Safe Mode launcher failed." -ForegroundColor Red
+        Write-Log "Defender Safe Mode launcher failed with exit code $LASTEXITCODE" 'ERROR'
+    }
 } elseif ($restart -ieq 'Y') {
     Write-Log "Restart requested by user." 'INFO'
     Restart-Computer -Force

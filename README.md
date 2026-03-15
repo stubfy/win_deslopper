@@ -69,11 +69,11 @@ You will be prompted for a few options before anything runs:
 - **Disable Windows Firewall profiles** (optional), default: Yes
 
 Estimated duration: 5 to 15 minutes. A reboot prompt is shown at the end.
-If you choose `[S]` there, the pack configures Safe Mode and creates `Disable Defender and Return to Normal Mode.bat` on the Desktop for the Defender step.
+If you choose `[S]` there, the pack triggers the same flow as `2 - Windows Defender/run_defender.bat`: Safe Mode is configured and `Disable Defender and Return to Normal Mode.bat` is created on the Desktop for the Defender step.
 
 **2. Reboot**
 
-**3. Follow the manual steps in order (`1 - Automated/scripts/19_defender_disable.ps1`, then folders 3 to 7, then `Tools/`)**
+**3. Follow the manual steps in order (`2 - Windows Defender/run_defender.bat` if you did not choose `[S]`, then folders 3 to 7, then `Tools/`)**
 
 The manual folders still contain a `readme.txt` with detailed instructions.
 
@@ -104,7 +104,7 @@ The manual folders still contain a `readme.txt` with detailed instructions.
 | `17_mouse_accel.ps1` | MarkC mouse acceleration fix (auto-detects DPI scaling) |
 | `18_firewall.ps1` | Windows Firewall profiles disabled |
 
-`19_defender_disable.ps1` is not run automatically. It is the Safe Mode Defender script launched by the Desktop helper when you choose `[S]` at the final reboot prompt.
+The Defender step is manual again and lives in `2 - Windows Defender/`. If you choose `[S]` at the final reboot prompt, `run_all.ps1` simply prepares that manual step for you by configuring Safe Mode and creating the Desktop helper automatically.
 
 ### Windows Update profiles
 
@@ -160,11 +160,11 @@ If the Microsoft Visual C++ x64 runtime required by `SetTimerResolution.exe` is 
 
 ## Manual phase
 
-To be done in order after rebooting. The Defender step is now a single script inside `1 - Automated/scripts/`; the other manual folders stay at the pack root.
+To be done in order after rebooting. The Defender step is back in its own manual folder at the pack root.
 
 | Step | Path | Why manual | Risk level |
 |------|------|-----------|------------|
-| 1 | **1 - Automated/scripts/19_defender_disable.ps1** | Requires Safe Mode - services protected by PPL in normal mode | High |
+| 1 | **2 - Windows Defender/run_defender.bat** | Requires Safe Mode; PPL and Tamper Protection block full disable in normal mode | High |
 | 2 | **3 - MSI Utils** | Manual identification of compatible devices required | Moderate |
 | 3 | **4 - NVInspector** | Per-game NVIDIA driver profiles, user-specific | Low |
 | 4 | **5 - Device Manager** | USB power saving per device node, not cleanly scriptable | Low |
@@ -213,7 +213,6 @@ win_deslopper/
 │   │   ├── run_all.ps1               Main PowerShell launcher
 │   │   ├── restore_all.ps1           Full rollback launcher
 │   │   ├── 01_backup.ps1 ... 18_*   Scripts by category
-│   │   ├── 19_defender_disable.ps1   Safe Mode Defender disable script
 │   │   ├── opt_*.ps1                 Optional (Edge/WebView2, OneDrive removal)
 │   ├── restore/                      Symmetric rollback scripts
 │   ├── tools/                        Third-party tools
@@ -222,6 +221,12 @@ win_deslopper/
 │   │   ├── SetTimerResolution.exe
 │   │   └── MeasureSleep.exe
 │   └── backup/                       Created at first run (gitignored)
+│
+├── 2 - Windows Defender/
+│   ├── run_defender.bat             Manual Safe Mode entry point
+│   ├── run_defender.ps1             Safe Mode launcher + Desktop helper creation
+│   ├── 1 - DisableDefender.ps1      Safe Mode Defender disable script
+│   └── readme.txt
 │
 ├── 3 - MSI Utils/
 ├── 4 - NVInspector/

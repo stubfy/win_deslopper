@@ -1,7 +1,9 @@
-$regpath='HKLM:\SYSTEM\CurrentControlSet\Services'
-Set-ItemProperty -Path ($regpath+"\WinDefend") -Name Start -Value 4
-Set-ItemProperty -Path ($regpath+"\Sense") -Name Start -Value 4
-Set-ItemProperty -Path ($regpath+"\WdFilter") -Name Start -Value 4
-Set-ItemProperty -Path ($regpath+"\WdNisDrv") -Name Start -Value 4
-Set-ItemProperty -Path ($regpath+"\WdNisSvc") -Name Start -Value 4
-Set-ItemProperty -Path ($regpath+"\WdBoot") -Name Start -Value 4
+$ErrorActionPreference = 'Stop'
+$repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$target = Join-Path $repoRoot '2 - Windows Defender\1 - DisableDefender.ps1'
+
+if (-not (Test-Path $target)) {
+    throw "Compatibility shim failed: missing $target"
+}
+
+& $target @args
