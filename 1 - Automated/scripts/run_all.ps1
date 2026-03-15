@@ -41,7 +41,7 @@
         a. Sets safeboot=minimal in BCD.
         b. Creates a helper .bat on the Desktop that disables Defender and
            removes the safeboot flag before rebooting to normal Windows.
-      This automates the Safe Mode Defender disable step (1 - Automated/scripts/Windows Defender/).
+      This automates the Safe Mode Defender disable step (1 - Automated/scripts/19_defender_disable.ps1).
 
 .NOTES
     Manual steps after execution: see README.md at the pack root
@@ -262,7 +262,7 @@ Write-Host "================================================" -ForegroundColor G
 Write-Host ""
 Write-Host "REMAINING MANUAL STEPS (see README.md at the pack root):" -ForegroundColor Cyan
 Write-Host "  1. Reboot the PC"
-Write-Host "  2. [Safe Mode] Disable Windows Defender      (1 - Automated/scripts/Windows Defender/)"
+Write-Host "  2. [Safe Mode] Disable Windows Defender      (1 - Automated/scripts/19_defender_disable.ps1)"
 Write-Host "  3. MSI Utils - enable MSI on GPU/NIC/NVMe   (3 - MSI Utils/)"
 Write-Host "  4. NVIDIA Profile Inspector - per-game       (4 - NVInspector/)"
 Write-Host "  5. Device Manager - disable USB power saving (5 - Gestionnaire/)"
@@ -290,7 +290,7 @@ if ($restart -ieq 'S') {
 
     # Create an explicit Safe Mode helper on the Desktop
     $batDest        = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Disable Defender and Return to Normal Mode.bat'
-    $defenderScript = Join-Path $SCRIPTS 'Windows Defender\1 - DisableDefender.ps1'
+    $defenderScript = Join-Path $SCRIPTS '19_defender_disable.ps1'
     if (-not (Test-Path $defenderScript)) {
         Write-Host ""
         Write-Host "  ERROR: Defender script not found." -ForegroundColor Red

@@ -36,7 +36,7 @@ win_deslopper applies a set of system tweaks to improve performance on Windows 1
 - **Network**: Cloudflare DNS, network throttling disabled, NIC offloads
 - **Windows Update**: configurable profile: Maximum / Security only / Disabled
 
-Everything scriptable is automated in a single pass. The rest is guided by `readme.txt` files in each folder.
+Everything scriptable is automated in a single pass. The remaining manual folders are guided by their local `readme.txt` files.
 
 ---
 
@@ -61,9 +61,9 @@ If you choose `[S]` there, the pack configures Safe Mode and creates `Disable De
 
 **2. Reboot**
 
-**3. Follow the manual steps in order (`1 - Automated/scripts/Windows Defender/`, then folders 3 to 7, then `Tools/`)**
+**3. Follow the manual steps in order (`1 - Automated/scripts/19_defender_disable.ps1`, then folders 3 to 7, then `Tools/`)**
 
-Each folder contains a `readme.txt` with detailed instructions.
+The manual folders still contain a `readme.txt` with detailed instructions.
 
 ---
 
@@ -91,6 +91,8 @@ Each folder contains a `readme.txt` with detailed instructions.
 | `16_uwt.ps1` | UWT-equivalent tweaks (appearance, privacy, context menu) |
 | `17_mouse_accel.ps1` | MarkC mouse acceleration fix (auto-detects DPI scaling) |
 | `18_firewall.ps1` | Windows Firewall profiles disabled |
+
+`19_defender_disable.ps1` is not run automatically. It is the Safe Mode Defender script launched by the Desktop helper when you choose `[S]` at the final reboot prompt.
 
 ### Windows Update profiles
 
@@ -146,11 +148,11 @@ If the Microsoft Visual C++ x64 runtime required by `SetTimerResolution.exe` is 
 
 ## Manual phase
 
-To be done in order after rebooting. `Windows Defender` now lives inside `1 - Automated/scripts/`; the other manual folders stay at the pack root.
+To be done in order after rebooting. The Defender step is now a single script inside `1 - Automated/scripts/`; the other manual folders stay at the pack root.
 
-| Step | Folder | Why manual | Risk level |
-|------|--------|-----------|------------|
-| 1 | **1 - Automated/scripts/Windows Defender** | Requires Safe Mode - services protected by PPL in normal mode | High |
+| Step | Path | Why manual | Risk level |
+|------|------|-----------|------------|
+| 1 | **1 - Automated/scripts/19_defender_disable.ps1** | Requires Safe Mode - services protected by PPL in normal mode | High |
 | 2 | **3 - MSI Utils** | Manual identification of compatible devices required | Moderate |
 | 3 | **4 - NVInspector** | Per-game NVIDIA driver profiles, user-specific | Low |
 | 4 | **5 - Device Manager** | USB power saving per device node, not cleanly scriptable | Low |
@@ -199,10 +201,8 @@ win_deslopper/
 │   │   ├── run_all.ps1               Main PowerShell launcher
 │   │   ├── restore_all.ps1           Full rollback launcher
 │   │   ├── 01_backup.ps1 ... 18_*   Scripts by category
+│   │   ├── 19_defender_disable.ps1   Safe Mode Defender disable script
 │   │   ├── opt_*.ps1                 Optional (Edge/WebView2, OneDrive removal)
-│   │   └── Windows Defender/         Safe Mode Defender disable helper
-│   │       ├── 1 - DisableDefender.ps1
-│   │       └── readme.txt
 │   ├── restore/                      Symmetric rollback scripts
 │   ├── tools/                        Third-party tools
 │   │   ├── OOSU10.exe

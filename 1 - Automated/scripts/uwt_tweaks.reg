@@ -188,7 +188,7 @@ Windows Registry Editor Version 5.00
 
 ; DisableAntiSpyware=1: Disables Windows Defender via Group Policy. This
 ; complements the manual Windows Defender step in
-; "1 - Automated/scripts/Windows Defender", which disables the six
+; "1 - Automated/scripts/19_defender_disable.ps1", which disables the six
 ; Defender services in Safe Mode (required because Tamper Protection blocks
 ; service changes in normal mode on Windows 11 25H2).
 ; The policy key alone is insufficient on 25H2 when Tamper Protection is active;
