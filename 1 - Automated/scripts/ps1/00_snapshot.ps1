@@ -26,7 +26,7 @@
 # This script is a development/diagnostic tool. It has no effect on the tweaks
 # themselves and can be re-run at any time to refresh the snapshot.
 
-$ROOT       = Split-Path $PSScriptRoot
+$ROOT       = Split-Path (Split-Path $PSScriptRoot)
 $BACKUP_DIR = Join-Path $ROOT "backup"
 $REG_FILES  = @(
     (Join-Path $PSScriptRoot "tweaks_consolidated.reg")

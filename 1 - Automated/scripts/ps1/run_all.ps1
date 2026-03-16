@@ -49,9 +49,9 @@
 #>
 
 $ErrorActionPreference = 'Continue'
-$ROOT         = Split-Path (Split-Path $MyInvocation.MyCommand.Path)
+$ROOT         = Split-Path (Split-Path (Split-Path $MyInvocation.MyCommand.Path))
 $PACK_ROOT    = Split-Path $ROOT -Parent
-$SCRIPTS      = Join-Path $ROOT "scripts"
+$SCRIPTS      = $PSScriptRoot
 $DEFENDER_DIR = Join-Path $PACK_ROOT "2 - Windows Defender"
 $PACK_VERSION = 'v0.8'
 $LOG_DIR      = Join-Path $env:APPDATA 'win_deslopper\logs'

@@ -32,7 +32,7 @@
 #      to RegBack every 24 hours, retaining the last 2 copies. Provides an
 #      additional safety net independent of VSS.
 
-$BACKUP_DIR = Join-Path (Split-Path $PSScriptRoot) "backup"
+$BACKUP_DIR = Join-Path (Split-Path (Split-Path $PSScriptRoot)) "backup"
 New-Item -ItemType Directory -Force -Path $BACKUP_DIR | Out-Null
 $serviceCatalog = & (Join-Path $PSScriptRoot '03_services.ps1') -ExportCatalogOnly
 

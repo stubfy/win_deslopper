@@ -1,8 +1,8 @@
 # restore\02_services.ps1 - Restore services to their original state
 
-$BACKUP_DIR = Join-Path (Split-Path $PSScriptRoot) "backup"
+$BACKUP_DIR = Join-Path (Split-Path (Split-Path $PSScriptRoot)) "backup"
 $stateFile  = Join-Path $BACKUP_DIR "services_state.json"
-$serviceCatalog = & (Join-Path (Join-Path (Split-Path $PSScriptRoot) 'scripts') '03_services.ps1') -ExportCatalogOnly
+$serviceCatalog = & (Join-Path (Split-Path (Split-Path $PSScriptRoot)) 'scripts\ps1\03_services.ps1') -ExportCatalogOnly
 
 function Set-ServiceDwordValue {
     param(

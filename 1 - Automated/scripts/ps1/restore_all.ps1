@@ -36,8 +36,8 @@
 #>
 
 $ErrorActionPreference = 'Continue'
-$ROOT    = Split-Path (Split-Path $MyInvocation.MyCommand.Path)
-$RESTORE = Join-Path $ROOT "restore"
+$ROOT    = Split-Path (Split-Path (Split-Path $MyInvocation.MyCommand.Path))
+$RESTORE = Join-Path $ROOT "restore\ps1"
 
 function Write-Step {
     param([string]$Msg)

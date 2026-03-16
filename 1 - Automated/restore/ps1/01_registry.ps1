@@ -1,7 +1,7 @@
 # restore\01_registry.ps1 - Restore registry keys modified by opti pack
 
 $RESTORE_DIR = $PSScriptRoot
-$BACKUP_DIR  = Join-Path (Split-Path $PSScriptRoot) "backup"
+$BACKUP_DIR  = Join-Path (Split-Path (Split-Path $PSScriptRoot)) "backup"
 $defaultsReg = Join-Path $RESTORE_DIR "tweaks_defaults.reg"
 
 # Step 1: Apply Windows default values (reverse of tweaks_consolidated.reg)

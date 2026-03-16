@@ -21,7 +21,7 @@
 # whether the update has reset any of the pack's tweaks back to defaults. Any "failed"
 # entries in that context are regressions introduced by the update.
 
-$ROOT      = Split-Path $PSScriptRoot
+$ROOT      = Split-Path (Split-Path $PSScriptRoot)
 $SNAP_FILE = Join-Path $ROOT "backup\snapshot_latest.json"
 $serviceCatalog = & (Join-Path $PSScriptRoot '03_services.ps1') -ExportCatalogOnly
 

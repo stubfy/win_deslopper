@@ -1,6 +1,6 @@
 # restore\18_firewall.ps1 - Restore Windows Firewall profile states
 
-$BACKUP_DIR = Join-Path (Split-Path $PSScriptRoot) "backup"
+$BACKUP_DIR = Join-Path (Split-Path (Split-Path $PSScriptRoot)) "backup"
 $stateFile  = Join-Path $BACKUP_DIR "firewall_state.json"
 
 $defaults = [ordered]@{

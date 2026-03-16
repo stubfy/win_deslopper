@@ -1,6 +1,6 @@
 # restore\17_mouse_accel.ps1 - Restore default Windows mouse acceleration curves
 
-$REG = Join-Path (Split-Path $PSScriptRoot) "scripts\mouse_fix\Windows_10+8.x_Default.reg"
+$REG = Join-Path (Split-Path (Split-Path $PSScriptRoot)) "scripts\ps1\mouse_fix\Windows_10+8.x_Default.reg"
 
 if (-not (Test-Path $REG)) {
     Write-Host "    [ERROR] Default mouse reg not found: $REG" -ForegroundColor Red

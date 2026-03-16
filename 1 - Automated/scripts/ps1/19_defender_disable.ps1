@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$repoRoot = Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent
 $target = Join-Path $repoRoot '2 - Windows Defender\1 - DisableDefender.ps1'
 
 if (-not (Test-Path $target)) {

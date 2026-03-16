@@ -3,5 +3,5 @@
 
 Write-Host "    Restoring Windows Update -> maximum mode (baseline)..."
 
-$SCRIPTS = Join-Path (Split-Path $PSScriptRoot) "scripts"
+$SCRIPTS = Join-Path (Split-Path (Split-Path $PSScriptRoot)) "scripts\ps1"
 & "$SCRIPTS\15_windows_update.ps1" -Profil 1

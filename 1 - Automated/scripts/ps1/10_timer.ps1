@@ -24,7 +24,7 @@
 #
 # Rollback: restore\06_timer.ps1 deletes the startup shortcut and terminates the process.
 
-$ROOT     = Split-Path $PSScriptRoot
+$ROOT     = Split-Path (Split-Path $PSScriptRoot)
 $timerSrc = Join-Path $ROOT "tools\SetTimerResolution.exe"
 $vcRuntimeDlls = @(
     (Join-Path $env:SystemRoot 'System32\vcruntime140.dll'),

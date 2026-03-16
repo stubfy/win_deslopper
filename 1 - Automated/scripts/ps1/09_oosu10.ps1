@@ -17,7 +17,7 @@
 # Rollback: OOSU10 has no built-in undo; the system restore point created by
 # 01_backup.ps1 is the recommended rollback path for OOSU10 changes.
 
-$ROOT    = Split-Path $PSScriptRoot
+$ROOT    = Split-Path (Split-Path $PSScriptRoot)
 $oosuExe = Join-Path $ROOT "tools\OOSU10.exe"
 $oosuCfg = Join-Path $ROOT "tools\ooshutup10.cfg"
 
