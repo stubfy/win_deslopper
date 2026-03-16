@@ -214,6 +214,8 @@ LatencyMon (Drivers tab) before and after -- same session, NVIDIA RTX 4090 on AM
 | ![LatencyMon before interrupt affinity](assets/readme/affinity-latencymon-before.png) | ![LatencyMon after interrupt affinity](assets/readme/affinity-latencymon-after.png) |
 | `nvlddmkm.sys` 3736 DPCs / 0.124 ms -- `dxgkrnl.sys` 576 DPCs / 0.139 ms | `nvlddmkm.sys` 116 DPCs / 0.035 ms (-97% / -72%) -- `dxgkrnl.sys` 90 DPCs / 0.092 ms (-84% / -34%) |
 
+> Note: the "before" baseline is already from a heavily optimized system. On a stock Windows install, `nvlddmkm.sys` highest execution can exceed 300 ms. The delta here reflects the affinity change alone, on top of everything else the pack already applied.
+
 To undo: `restore_affinity.bat` in the same folder.
 
 ### Service startup tweaks
