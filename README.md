@@ -144,17 +144,38 @@ The Defender step is manual again and lives in `2 - Windows Defender/`. If you c
 
 `run_all.ps1` asks whether `SetTimerResolution` should be enabled at startup.
 
-If you already use `Process Lasso`, answer `N` there and use its built-in equivalent instead:
+What to use:
+- if you do not use `Process Lasso`, enable `SetTimerResolution`
+- if you already use `Process Lasso` for other reasons, prefer `Process Lasso > Options > Tools > System Timer Resolution` instead of running `SetTimerResolution` separately
+- do not use both for the same purpose, because that only adds a redundant background process
 
+If you use `Process Lasso`:
 1. Open `Process Lasso`.
 2. Go to `Options > Tools > System Timer Resolution`.
-3. Set `New Timer Resolution` to `0.520`.
+3. Set `New Timer Resolution` to the exact value you want, for example `0.510` or `0.520`.
 4. Enable `Set at every boot`.
 5. Enable `Apply globally`.
 
-After rebooting, run `Tools/MeasureSleep.exe` as administrator and confirm that the measured value is around `5200`.
+After reboot, run `Tools/MeasureSleep.exe` as administrator.
 
-Using `Process Lasso` for this avoids keeping a separate `SetTimerResolution.exe` process running just for the timer request.
+A good result should look similar to this:
+
+    Resolution: 0.5100ms, Sleep(1) slept 1.0168ms (delta: 0.0168)
+    Resolution: 0.5100ms, Sleep(1) slept 1.0210ms (delta: 0.0210)
+    Resolution: 0.5100ms, Sleep(1) slept 1.0156ms (delta: 0.0156)
+
+Do not expect the exact same numbers on every line. What matters is:
+- either `Process Lasso` or `SetTimerResolution` is forcing the exact timer value you selected
+- if you set `0.510`, `MeasureSleep` should report about `0.5100ms`
+- if you set `0.520`, `MeasureSleep` should report about `0.5200ms`
+- `Sleep(1)` should stay close to `1 ms`
+- `delta` should stay low, usually only a few hundredths of a millisecond
+
+About `delta`:
+- `delta` is the extra time above the requested `Sleep(1)` duration
+- example: `Sleep(1) slept 1.0168ms` means the sleep overshot by `0.0168ms`
+- small positive deltas are normal because scheduling is never perfectly exact
+- if `delta` is consistently high, timer behavior is less clean
 
 ### Service startup tweaks
 
@@ -273,7 +294,7 @@ win_deslopper/
 | **Service startup tweaks** | Services touched by `03_services.ps1` are aligned to the reference main PC. The noisiest services are disabled again, most secondary ones stay manual, and `BITS` / `UsoSvc` / `wuauserv` can still be adjusted later by the chosen Windows Update profile. |
 | **WU Disabled profile** | No security patches, only use on isolated gaming machines. |
 | **Firewall disabled** | No Windows firewall filtering. Use only if another firewall or isolated setup covers the machine. |
-| **Timer resolution tools** | `SetTimerResolution` is optional in `run_all.ps1`. If you already use `Process Lasso > Options > Tools > System Timer Resolution`, do not enable both. Configure it to `0.520`, with `Set at every boot` and `Apply globally` enabled, then reboot and verify with `Tools/MeasureSleep.exe` run as administrator that the timer resolution is around `5200`. If it is not `5200`, another program may be forcing it to `5000`, and you need to find that process manually. Known culprits include VoiceMeeter Macro Buttons below v1.1.3.1, which forces 0.50 ms via `NtSetTimerResolution`; update it to v1.1.3.1+ (available on the VB-Audio Discord). Recent VoiceMeeter builds themselves should no longer force the timer resolution, so a registry fix is normally not needed. If VoiceMeeter still appears to be involved on your system, a known fallback fix exists: set `TimerResolution=1` (DWORD) at `HKCU\VB-Audio\VoiceMeeter`. OpenRGB is another known conflict because it holds a 0.50 ms timer resolution request for as long as it is running; close it after configuring your LED profiles. |
+| **Timer resolution tools** | If you do not use `Process Lasso`, enable `SetTimerResolution`. If you already use `Process Lasso` for other reasons, prefer `Process Lasso > Options > Tools > System Timer Resolution` and do not use both. Set the exact target you want, such as `0.510` or `0.520`, then reboot and verify it with `Tools/MeasureSleep.exe` run as administrator. `MeasureSleep` should report the same effective value you selected (`0.5100ms` for `0.510`, `0.5200ms` for `0.520`), with `Sleep(1)` staying close to `1 ms` and a low `delta`. Known culprits include VoiceMeeter Macro Buttons below v1.1.3.1, which forces 0.50 ms via `NtSetTimerResolution`; update it to v1.1.3.1+ (available on the VB-Audio Discord). Recent VoiceMeeter builds themselves should no longer force the timer resolution, so a registry fix is normally not needed. If VoiceMeeter still appears to be involved on your system, a known fallback fix exists: set `TimerResolution=1` (DWORD) at `HKCU\VB-Audio\VoiceMeeter`. OpenRGB is another known conflict because it holds a 0.50 ms timer resolution request for as long as it is running; close it after configuring your LED profiles. |
 
 ---
 
