@@ -87,3 +87,27 @@ DO NOT ENABLE -- BSOD RISK
 
 Note : if MSI mode is already active on a USB controller, the driver
 supports it natively -- do not change anything in that case.
+
+
+SNAPSHOT AND RESTORE
+--------------------
+After configuring MSI mode with the GUI tools, save the state for replay
+(e.g., after a reformat).
+
+  Snapshot (run once, after MSI configuration):
+    msi_snapshot.bat
+    Creates a backup of the current state, then captures MSI settings
+    of all PCI devices to msi_state.json.
+
+  Restore (run after reformat / fresh install):
+    msi_restore.bat
+    Creates a backup of the current state, then reapplies MSI settings
+    from msi_state.json.
+    Devices no longer present on the system are skipped with a warning.
+    Reboot required afterward.
+
+  Automatic integration:
+    If msi_state.json exists when running the main pack (run_all.bat),
+    you will be prompted to apply it automatically (default: Yes).
+
+  msi_state.json is human-readable and can be edited manually if needed.

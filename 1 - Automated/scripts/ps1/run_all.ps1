@@ -54,6 +54,7 @@ $ROOT         = Split-Path (Split-Path (Split-Path $MyInvocation.MyCommand.Path)
 $PACK_ROOT    = Split-Path $ROOT -Parent
 $SCRIPTS      = $PSScriptRoot
 $DEFENDER_DIR  = Join-Path $PACK_ROOT "2 - Windows Defender"
+$MSI_UTILS_DIR = Join-Path $PACK_ROOT "3 - MSI Utils"
 $AFFINITY_DIR  = Join-Path $PACK_ROOT "6 - Interrupt Affinity"
 $PACK_VERSION = 'v0.8'
 $LOG_DIR      = Join-Path $env:APPDATA 'win_deslopper\logs'
@@ -289,6 +290,33 @@ if ($setInterruptAffinity) {
     Write-Log "Skipped: set_affinity.ps1 (user opted out)" 'INFO'
 }
 
+# ── PHASE B.20 - MSI interrupt mode ───────────────────────────────────────────
+$msiStateFile    = Join-Path $MSI_UTILS_DIR "msi_state.json"
+$msiStateApplied = $false
+if (Test-Path $msiStateFile) {
+    Write-Step "PHASE B.20 - MSI interrupt mode (from saved snapshot)"
+    $msiMeta = (Get-Content $msiStateFile -Encoding UTF8 | ConvertFrom-Json)._meta
+    Write-Host "    Snapshot found: $msiStateFile" -ForegroundColor Cyan
+    Write-Host "    Created: $($msiMeta.created) on $($msiMeta.machine)" -ForegroundColor DarkGray
+
+    $ans = Read-Host "  Apply saved MSI configuration? (Y/N) [default: Y]"
+    if ($ans -eq '' -or $ans -ieq 'Y') {
+        $restoreScript = Join-Path $MSI_UTILS_DIR "msi_restore.ps1"
+        & $restoreScript -StateFile $msiStateFile -SkipConfirm
+        Write-Log "MSI state restored from snapshot" 'OK'
+        $msiStateApplied = $true
+    } else {
+        Write-Host "    Skipped. Run 3 - MSI Utils\msi_restore.bat manually." -ForegroundColor Yellow
+        Write-Log "Skipped: MSI restore (user opted out)" 'INFO'
+    }
+} else {
+    Write-Step "PHASE B.20 - MSI interrupt mode (no snapshot found)"
+    Write-Host "    No msi_state.json found in 3 - MSI Utils/." -ForegroundColor DarkGray
+    Write-Host "    Configure MSI manually via MSI_util_v3.exe, then run msi_snapshot.bat to save" -ForegroundColor DarkGray
+    Write-Host "    your settings -- next time run_all.bat runs, it will apply them automatically." -ForegroundColor DarkGray
+    Write-Log "Skipped: MSI restore (no msi_state.json found)" 'INFO'
+}
+
 # ── OPTIONS: physical uninstalls ──────────────────────────────────────────────
 if ($uninstallEdge) {
     Write-Step "OPTION - Microsoft Edge + WebView2 Runtime uninstall"
@@ -313,7 +341,14 @@ Write-Host ""
 Write-Host "REMAINING MANUAL STEPS (see README.md at the pack root):" -ForegroundColor Cyan
 Write-Host "  1. Reboot the PC"
 Write-Host "  2. [Safe Mode] Disable Windows Defender      (2 - Windows Defender/run_defender.bat)"
-Write-Host "  3. MSI Utils - enable MSI on GPU/NIC/NVMe   (3 - MSI Utils/)"
+if ($msiStateApplied) {
+    Write-Host "  3. MSI Utils - snapshot applied automatically. Verify devices, reboot if needed." -ForegroundColor Green
+} else {
+    Write-Host "  3. MSI Utils - enable MSI on GPU/NIC/NVMe   (3 - MSI Utils/)" -ForegroundColor Yellow
+    if (-not (Test-Path $msiStateFile)) {
+        Write-Host "     -> After configuring, run msi_snapshot.bat to save settings for next time." -ForegroundColor DarkGray
+    }
+}
 Write-Host "  4. NVIDIA Profile Inspector - per-game       (4 - NVInspector/)"
 Write-Host "  5. Device Manager - disable USB power saving (5 - Gestionnaire/)"
 Write-Host "  6. Interrupt Affinity - re-run set_affinity.bat after each NVIDIA driver update"

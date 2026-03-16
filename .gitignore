@@ -12,6 +12,9 @@ check_updates.bat
 CLAUDE.md
 AGENTS.md
 
+# MSI snapshot (machine-specific)
+3 - MSI Utils/msi_state*.json
+
 # Logs locaux
 *.log
 
