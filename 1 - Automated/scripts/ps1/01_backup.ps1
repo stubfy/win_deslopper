@@ -90,6 +90,45 @@ try {
     Write-Host "    [WARNING] Unable to save firewall profile states." -ForegroundColor Yellow
 }
 
+# Export GPU interrupt affinity state (for rollback after driver updates)
+$affinityState = @{}
+try {
+    $gpus = Get-PnpDevice -Class Display -Status OK -ErrorAction SilentlyContinue |
+        Where-Object { $_.InstanceId -match '^PCI\\' }
+    foreach ($gpu in $gpus) {
+        $deviceIds = @($gpu.InstanceId)
+        try {
+            $pp = Get-PnpDeviceProperty -InstanceId $gpu.InstanceId `
+                -KeyName 'DEVPKEY_Device_Parent' -ErrorAction Stop
+            if ($pp.Data -match '^PCI\\') {
+                $deviceIds += $pp.Data
+                $gpp = Get-PnpDeviceProperty -InstanceId $pp.Data `
+                    -KeyName 'DEVPKEY_Device_Parent' -ErrorAction Stop
+                if ($gpp.Data -match '^PCI\\') { $deviceIds += $gpp.Data }
+            }
+        } catch {}
+        foreach ($devId in $deviceIds) {
+            $policyPath = "HKLM:\SYSTEM\CurrentControlSet\Enum\$devId\" +
+                          "Device Parameters\Interrupt Management\Affinity Policy"
+            if (Test-Path $policyPath) {
+                $props = Get-ItemProperty -Path $policyPath -ErrorAction SilentlyContinue
+                $affinityState[$devId] = @{
+                    Existed               = $true
+                    DevicePolicy          = $props.DevicePolicy
+                    AssignmentSetOverride = @($props.AssignmentSetOverride)
+                }
+            } else {
+                $affinityState[$devId] = @{ Existed = $false }
+            }
+        }
+    }
+    $affinityState | ConvertTo-Json -Depth 3 |
+        Set-Content "$BACKUP_DIR\affinity_state.json" -Encoding UTF8
+    Write-Host "    Affinity states saved -> backup\affinity_state.json"
+} catch {
+    Write-Host "    [WARNING] Unable to save affinity states." -ForegroundColor Yellow
+}
+
 # Export modified registry keys
 $regExports = @{
     'HKLM_Control'           = 'HKLM\SYSTEM\CurrentControlSet\Control'

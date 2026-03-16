@@ -27,6 +27,7 @@
       16_uwt.ps1               - Imports uwt_defaults.reg + resets SPI visual effects
       20_personal_settings.ps1 - Imports personal_settings_defaults.reg
       17_mouse_accel.ps1       - Imports Windows default mouse acceleration curves
+      restore_affinity.ps1     - Deletes or reverts GPU interrupt affinity policy
 
     Known limitations (not automatically restored):
       - UWP apps removed by 08_debloat.ps1 must be reinstalled manually from the Store.
@@ -36,8 +37,9 @@
 #>
 
 $ErrorActionPreference = 'Continue'
-$ROOT    = Split-Path (Split-Path (Split-Path $MyInvocation.MyCommand.Path))
-$RESTORE = Join-Path $ROOT "restore\ps1"
+$ROOT         = Split-Path (Split-Path (Split-Path $MyInvocation.MyCommand.Path))
+$RESTORE      = Join-Path $ROOT "restore\ps1"
+$AFFINITY_DIR = Join-Path (Split-Path $ROOT -Parent) "6 - Interrupt Affinity"
 
 function Write-Step {
     param([string]$Msg)
@@ -118,6 +120,9 @@ Invoke-Script "$RESTORE\20_personal_settings.ps1"
 
 Write-Step "Restore mouse acceleration curves (Windows default)"
 Invoke-Script "$RESTORE\17_mouse_accel.ps1"
+
+Write-Step "Restore GPU interrupt affinity (Windows default)"
+Invoke-Script (Join-Path $AFFINITY_DIR "restore_affinity.ps1")
 
 # Scheduled tasks
 Write-Host ""

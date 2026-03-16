@@ -30,6 +30,7 @@
         16 uwt            -> UWT equivalent tweaks + SPI visual effects
         20 personal       -> Subjective shell/theme preferences
         17 mouse_accel    -> MarkC mouse fix (DPI-aware)
+        21 int_affinity  -> GPU IRQ pin to core 2 (user choice)
       Options - Edge uninstall, OneDrive uninstall (user choice)
       Phase C - Diff report (99_show_diff)
 
@@ -52,7 +53,8 @@ $ErrorActionPreference = 'Continue'
 $ROOT         = Split-Path (Split-Path (Split-Path $MyInvocation.MyCommand.Path))
 $PACK_ROOT    = Split-Path $ROOT -Parent
 $SCRIPTS      = $PSScriptRoot
-$DEFENDER_DIR = Join-Path $PACK_ROOT "2 - Windows Defender"
+$DEFENDER_DIR  = Join-Path $PACK_ROOT "2 - Windows Defender"
+$AFFINITY_DIR  = Join-Path $PACK_ROOT "6 - Interrupt Affinity"
 $PACK_VERSION = 'v0.8'
 $LOG_DIR      = Join-Path $env:APPDATA 'win_deslopper\logs'
 $LOG_FILE     = Join-Path $LOG_DIR "win_deslopper.log"
@@ -193,6 +195,18 @@ if ($ans -ieq 'N') {
     Write-Log "Option selected: SetTimerResolution startup = YES" 'INFO'
 }
 
+$setInterruptAffinity = $true
+$ans = Read-Host "  Pin GPU interrupt affinity to core 2? (Y/N) [default: Y]"
+if ($ans -ieq 'N') {
+    $setInterruptAffinity = $false
+    Write-Host "  -> Skipping. Run 6 - Interrupt Affinity\set_affinity.bat manually." -ForegroundColor Yellow
+    Write-Log "Option selected: Interrupt affinity = NO" 'INFO'
+} else {
+    Write-Host "  -> GPU interrupt chain will be pinned to core 2." -ForegroundColor Yellow
+    Write-Host "     Re-run set_affinity.bat after each NVIDIA driver update." -ForegroundColor DarkGray
+    Write-Log "Option selected: Interrupt affinity = YES" 'INFO'
+}
+
 Write-Host ""
 
 # ── PHASE A: Snapshot + Backup ────────────────────────────────────────────────
@@ -266,6 +280,15 @@ Invoke-Script "$SCRIPTS\20_personal_settings.ps1"
 Write-Step "PHASE B.18 - MarkC mouse acceleration fix (1:1 scaling)"
 Invoke-Script "$SCRIPTS\17_mouse_accel.ps1"
 
+if ($setInterruptAffinity) {
+    Write-Step "PHASE B.19 - GPU interrupt affinity (pin to core 2)"
+    Invoke-Script (Join-Path $AFFINITY_DIR "set_affinity.ps1")
+} else {
+    Write-Step "PHASE B.19 - GPU interrupt affinity (skipped)"
+    Write-Host "    Skipped        : run 6 - Interrupt Affinity\set_affinity.bat after NVIDIA updates"
+    Write-Log "Skipped: set_affinity.ps1 (user opted out)" 'INFO'
+}
+
 # ── OPTIONS: physical uninstalls ──────────────────────────────────────────────
 if ($uninstallEdge) {
     Write-Step "OPTION - Microsoft Edge + WebView2 Runtime uninstall"
@@ -293,7 +316,7 @@ Write-Host "  2. [Safe Mode] Disable Windows Defender      (2 - Windows Defender
 Write-Host "  3. MSI Utils - enable MSI on GPU/NIC/NVMe   (3 - MSI Utils/)"
 Write-Host "  4. NVIDIA Profile Inspector - per-game       (4 - NVInspector/)"
 Write-Host "  5. Device Manager - disable USB power saving (5 - Gestionnaire/)"
-Write-Host "  6. Interrupt Affinity - pin GPU IRQ to core  (6 - Interrupt Affinity/)"
+Write-Host "  6. Interrupt Affinity - re-run set_affinity.bat after each NVIDIA driver update"
 Write-Host "  7. NIC settings - disable offloads, buffers  (7 - Network WIP/)"
 Write-Host "  8. Optional timer check: verify with MeasureSleep.exe as admin (Tools/)"
 Write-Host ""

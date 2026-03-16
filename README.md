@@ -69,6 +69,7 @@ You will be prompted for a few options before anything runs:
 - **Uninstall OneDrive** (optional), default: Yes
 - **Disable Windows Firewall profiles** (optional), default: Yes
 - **Enable SetTimerResolution at startup** (optional), default: Yes. If you already use Process Lasso, you can skip it.
+- **Pin GPU interrupt affinity to core 2** (optional), default: Yes. Re-run `6 - Interrupt Affinity/set_affinity.bat` after each NVIDIA driver update.
 
 Estimated duration: 5 to 15 minutes. A reboot prompt is shown at the end.
 If you pick `[S]`, Safe Mode gets configured and a `Disable Defender and Return to Normal Mode.bat` shortcut lands on the Desktop, same thing as running `2 - Windows Defender/run_defender.bat` yourself.
@@ -106,6 +107,7 @@ The manual folders still contain a `readme.txt` with detailed instructions.
 | `16_uwt.ps1` | UWT-equivalent tweaks (privacy, context menu, visual effects) |
 | `20_personal_settings.ps1` | Personal shell/theme preferences (dark mode, accents, taskbar clock seconds, Explorer presentation) |
 | `17_mouse_accel.ps1` | MarkC mouse acceleration fix (auto-detects DPI scaling) |
+| `set_affinity.ps1` | GPU interrupt chain pinned to core 2 (GPU, PCI Bridge, Root Complex) |
 
 Defender is handled manually from `2 - Windows Defender/`. Picking `[S]` at the reboot prompt just sets up Safe Mode and drops the helper `.bat` on your Desktop so you're ready after reboot.
 
@@ -177,6 +179,43 @@ About `delta`:
 - small positive deltas are normal because scheduling is never perfectly exact
 - if `delta` is consistently high, timer behavior is less clean
 
+### GPU interrupt affinity
+
+`run_all.ps1` asks whether the GPU interrupt chain should be pinned to core 2. It automatically detects the GPU, walks the PCI chain (GPU -> PCI Bridge -> Root Complex), and writes the affinity policy to the registry for each device.
+
+**NVIDIA driver updates reset this setting.** After every NVIDIA driver update, re-run:
+
+```
+6 - Interrupt Affinity/set_affinity.bat   (double-click, UAC prompt is automatic)
+```
+
+The script outputs the full chain with the core assignment for each device:
+
+```
+[OK]  [1] GPU            -> core 2  DevicePolicy=4  AssignmentSetOverride=04 00 00 00
+[OK]  [2] PCI Bridge     -> core 2  DevicePolicy=4  AssignmentSetOverride=04 00 00 00
+[OK]  [3] Root Complex   -> core 2  DevicePolicy=4  AssignmentSetOverride=04 00 00 00
+```
+
+On AMD platforms, the PCI Root Complex appears as an ACPI device (`ACPI\PNP0A08`) rather than a PCI device in the Windows PnP tree. The script detects this, notes it, and applies to GPU + PCI Bridge only -- which is sufficient. This is not an error.
+
+```
+[NOTE] Root Complex is ACPI (ACPI\PNP0A08\0) -- normal on AMD.
+[OK]  [1] GPU        -> core 2 ...
+[OK]  [2] PCI Bridge -> core 2 ...
+```
+
+Core 2 avoids core 0 (OS/system interrupts) and stays on a separate physical core on Intel HT setups (core 1 is the HT pair of core 0).
+
+LatencyMon (Drivers tab) before and after -- same session, NVIDIA RTX 4090 on AMD platform:
+
+| Before | After |
+|--------|-------|
+| ![LatencyMon before interrupt affinity](assets/readme/affinity-latencymon-before.png) | ![LatencyMon after interrupt affinity](assets/readme/affinity-latencymon-after.png) |
+| `nvlddmkm.sys` 3736 DPCs / 0.124 ms -- `dxgkrnl.sys` 576 DPCs / 0.139 ms | `nvlddmkm.sys` 116 DPCs / 0.035 ms (-97% / -72%) -- `dxgkrnl.sys` 90 DPCs / 0.092 ms (-84% / -34%) |
+
+To undo: `restore_affinity.bat` in the same folder.
+
 ### Service startup tweaks
 
 `03_services.ps1` matches the startup types from the reference main PC.
@@ -207,7 +246,7 @@ To be done in order after rebooting. The Defender step is back in its own manual
 | 2 | **3 - MSI Utils** | Manual identification of compatible devices required | Moderate |
 | 3 | **4 - NVInspector** | Per-game NVIDIA driver profiles, user-specific | Low |
 | 4 | **5 - Device Manager** | USB power saving per device node, not cleanly scriptable | Low |
-| 5 | **6 - Interrupt Affinity** | GPU PCI bridge identification required | Moderate |
+| 5 | **6 - Interrupt Affinity** | Automated by `set_affinity.bat`. Re-run after each NVIDIA driver update (driver resets the setting). | Low |
 | 6 | **7 - Network WIP** | NIC settings depend on adapter model | Moderate |
 | 7 | **Tools** | Complementary tools (Autoruns, temp folders) | Low |
 
@@ -233,6 +272,7 @@ Restores in order:
 - Windows Update (restored to Maximum / Windows default)
 - Windows Firewall profiles (restored to saved state or Windows default)
 - Personal shell/theme settings (restored to Windows defaults)
+- GPU interrupt affinity (Affinity Policy keys removed or restored to pre-tweak state)
 - Optional reinstall prompt for Microsoft Edge + WebView2 Runtime / OneDrive
 
 > **Limitation** : Removed UWP apps are not restored automatically. The `10_debloat_restore.ps1` script provides Store reinstall commands.
@@ -288,7 +328,7 @@ win_deslopper/
 | **Edge / WebView2 uninstall** | Uses the current WinUtil-style dummy-file flow for Edge, then tries to remove the WebView2 Runtime. On Windows 11 or with apps that depend on WebView2, the runtime can come back later. |
 | **VBS/HVCI disabled** | Credential Guard and memory protections are off. Good perf gain, but you lose some security hardening. |
 | **MSI Utils** | Do not enable MSI on audio controllers, capture cards (ELGATO) or legacy USB - BSOD risk. |
-| **Interrupt Affinity** | Wrong pinning can increase latency instead of reducing it. Identify the correct PCI bridge before any change. |
+| **Interrupt Affinity** | The automated script detects the GPU chain and pins to core 2. On AMD, the Root Complex appears as ACPI -- normal, GPU + Bridge is applied and is sufficient. NVIDIA driver updates silently reset this -- re-run `set_affinity.bat` after each update. |
 | **Service startup tweaks** | Startup types come from the reference main PC. Noisiest services are disabled, most stay manual. `BITS` / `UsoSvc` / `wuauserv` can still change depending on the Windows Update profile you pick. |
 | **WU Disabled profile** | No security patches, only use on isolated gaming machines. |
 | **Firewall disabled** | No Windows firewall filtering. Use only if another firewall or isolated setup covers the machine. |

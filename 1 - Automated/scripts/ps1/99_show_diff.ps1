@@ -163,12 +163,37 @@ foreach ($key in $bcdDesired.Keys) {
     }
 }
 
+# ── Affinity diff ─────────────────────────────────────────────────────────────
+$affinityApplied = 0
+$affinityAlready = 0
+
+if ($snap.Affinity) {
+    foreach ($prop in $snap.Affinity.PSObject.Properties) {
+        $devId       = $prop.Name
+        $beforeSnap  = $prop.Value
+        $beforePolicy = if ($null -ne $beforeSnap.DevicePolicy) { [int]$beforeSnap.DevicePolicy } else { $null }
+
+        $policyPath  = "HKLM:\SYSTEM\CurrentControlSet\Enum\$devId\" +
+                       "Device Parameters\Interrupt Management\Affinity Policy"
+        $currentPolicy = $null
+        if (Test-Path $policyPath) {
+            $props = Get-ItemProperty -Path $policyPath -ErrorAction SilentlyContinue
+            if ($null -ne $props.DevicePolicy) { $currentPolicy = [int]$props.DevicePolicy }
+        }
+
+        if ($currentPolicy -eq 4) {
+            if ($beforePolicy -eq 4) { $affinityAlready++ } else { $affinityApplied++ }
+        }
+    }
+}
+
 # ── Display ───────────────────────────────────────────────────────────────────
 function fPath([string]$p) { $p -replace 'HKLM:\\','HKLM\' -replace 'HKCU:\\','HKCU\' -replace 'HKCR:\\','HKCR\' }
 
 $totalReg = $regChanged.Count + $regAlready + $regFailed.Count
 $totalSvc = $svcChanged.Count + $svcAlready + $svcFailed.Count
 $totalBcd = $bcdChanged.Count + $bcdAlready
+$totalAff = if ($snap.Affinity) { @($snap.Affinity.PSObject.Properties).Count } else { 0 }
 
 Write-Host ""
 Write-Host "  RECAP - What actually changed" -ForegroundColor Cyan
@@ -183,6 +208,10 @@ Write-Host ("  {0,-12} {1,3} checked   {2,3} already OK   {3,3} applied   {4,3} 
     "Services",  $totalSvc, $svcAlready,  $svcChanged.Count,  $svcFailed.Count) -ForegroundColor White
 Write-Host ("  {0,-12} {1,3} checked   {2,3} already OK   {3,3} applied" -f `
     "BCD",  $totalBcd, $bcdAlready,  $bcdChanged.Count) -ForegroundColor White
+if ($snap.Affinity) {
+    Write-Host ("  {0,-12} {1,3} checked   {2,3} already OK   {3,3} applied" -f `
+        "Affinity", $totalAff, $affinityAlready, $affinityApplied) -ForegroundColor White
+}
 
 # Registry changes
 if ($regChanged.Count -gt 0) {

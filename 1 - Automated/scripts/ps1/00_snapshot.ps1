@@ -164,12 +164,43 @@ try {
     }
 } catch {}
 
+# ── Affinity snapshot ─────────────────────────────────────────────────────────
+$affinitySnap = [ordered]@{}
+try {
+    $gpus = Get-PnpDevice -Class Display -Status OK -ErrorAction SilentlyContinue |
+        Where-Object { $_.InstanceId -match '^PCI\\' }
+    foreach ($gpu in $gpus) {
+        $deviceIds = @($gpu.InstanceId)
+        try {
+            $pp = Get-PnpDeviceProperty -InstanceId $gpu.InstanceId `
+                -KeyName 'DEVPKEY_Device_Parent' -ErrorAction Stop
+            if ($pp.Data -match '^PCI\\') {
+                $deviceIds += $pp.Data
+                $gpp = Get-PnpDeviceProperty -InstanceId $pp.Data `
+                    -KeyName 'DEVPKEY_Device_Parent' -ErrorAction Stop
+                if ($gpp.Data -match '^PCI\\') { $deviceIds += $gpp.Data }
+            }
+        } catch {}
+        foreach ($devId in $deviceIds) {
+            $policyPath = "HKLM:\SYSTEM\CurrentControlSet\Enum\$devId\" +
+                          "Device Parameters\Interrupt Management\Affinity Policy"
+            if (Test-Path $policyPath) {
+                $props = Get-ItemProperty -Path $policyPath -ErrorAction SilentlyContinue
+                $affinitySnap[$devId] = @{ Existed = $true; DevicePolicy = $props.DevicePolicy }
+            } else {
+                $affinitySnap[$devId] = @{ Existed = $false; DevicePolicy = $null }
+            }
+        }
+    }
+} catch {}
+
 # ── Save ──────────────────────────────────────────────────────────────────────
 @{
     Timestamp = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
     Registry  = $regArray
     Services  = $svcSnap
     BCD       = $bcdSnap
+    Affinity  = $affinitySnap
 } | ConvertTo-Json -Depth 4 | Set-Content $SNAP_FILE -Encoding UTF8
 
 Write-Host "    Saved    : $SNAP_FILE"
