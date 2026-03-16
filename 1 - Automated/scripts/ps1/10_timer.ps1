@@ -66,7 +66,7 @@ function Ensure-VcRuntimeForTimerTools {
         }
     }
 
-    if (Test-Path $vcRuntimeDll) {
+    if (($vcRuntimeDlls | Where-Object { -not (Test-Path $_) }).Count -eq 0) {
         Write-Host "    VC++ runtime   : installed"
         return $true
     }
