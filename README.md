@@ -207,7 +207,7 @@ On AMD platforms, the PCI Root Complex appears as an ACPI device (`ACPI\PNP0A08`
 
 Core 2 avoids core 0 (OS/system interrupts) and stays on a separate physical core on Intel HT setups (core 1 is the HT pair of core 0).
 
-LatencyMon (Drivers tab) before and after -- same session, NVIDIA RTX 4090 on AMD platform:
+LatencyMon (Drivers tab) before and after -- same session, NVIDIA RTX 4090 on AMD platform, both runs stopped at exactly 1 minute (counts are directly comparable):
 
 | Before | After |
 |--------|-------|
