@@ -252,8 +252,8 @@ Which devices get MSI enabled is a judgment call -- you have to look at the list
 
 1. `PCIutil.exe` as administrator, close it right away (loads the kernel driver `MSI_util_v3.exe` needs)
 2. `MSI_util_v3.exe` as administrator -- enable MSI on GPU, NIC, NVMe. See `readme.txt` for what to avoid
-3. Reboot, check nothing broke
-4. `msi_snapshot.bat` -- saves the current state to `msi_state.json`
+3. `msi_snapshot.bat` -- saves the current state to `msi_state.json` before rebooting
+4. Reboot, check nothing broke
 
 **After a reformat:**
 
