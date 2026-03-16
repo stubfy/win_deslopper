@@ -163,7 +163,11 @@ After reboot, verify with `Tools/MeasureSleep.exe` (as admin). The requested tim
 |-----------|---------------|-----------------|
 | ![Timer request not applied globally yet](assets/readme/timer-not-global.png) | ![Clean global timer resolution result](assets/readme/timer-global-clean.png) | ![Global timer resolution result with more jitter](assets/readme/timer-global-noisy.png) |
 
-Left: `GlobalTimerResolutionRequests=0`, `Sleep(1)` still at ~15.6 ms. Middle: `=1`, timer active globally, `Sleep(1)` near `1.01-1.02 ms`. Right: same key, valid, but more jitter.
+**Not global** -- `GlobalTimerResolutionRequests=0`: the timer request is active for the process that set it, but Windows isn't propagating it system-wide. `Sleep(1)` still resolves at the default ~15.6 ms tick.
+
+**Global, clean** -- `GlobalTimerResolutionRequests=1`: the request applies system-wide. `Sleep(1)` resolves near `1.01-1.02 ms` with low delta throughout. Best result.
+
+**Global, noisier** -- same registry key, timer is still global, but `Sleep(1)` drifts to `1.1-1.5 ms` with larger spikes. Valid confirmation the timer is active, just less stable -- usually hardware or load conditions.
 
 ### GPU interrupt affinity
 
