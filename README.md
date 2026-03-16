@@ -157,6 +157,8 @@ If you use Process Lasso instead:
 2. Set the value you want (`0.510`, `0.520`, etc.)
 3. Enable `Set at every boot` + `Apply globally`
 
+Use `0.510` or `0.520` rather than `0.500`. At exactly 0.5 ms you're asking for the hardware minimum -- the system can't always hit it precisely and may overshoot to the next achievable interval, causing inconsistent `Sleep(1)` behavior and higher delta. A slightly higher target (5100 or 5200 in 100ns units) is within comfortable reach of the hardware and gets honored consistently.
+
 After reboot, verify with `Tools/MeasureSleep.exe` (as admin). The requested timer value should be active and `Sleep(1)` should stay close to `1 ms`.
 
 | Not global | Global, clean | Global, noisier |
