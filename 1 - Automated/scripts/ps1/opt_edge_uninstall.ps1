@@ -291,6 +291,9 @@ function Uninstall-Edge {
             Write-Host "    Launching Edge uninstall..."
             $proc = Invoke-InstallerCommand -CommandLine $commandLine
             Write-Host "    Exit code      : $($proc.ExitCode)"
+            # Cancel any pending OS reboot that setup.exe may have scheduled so the
+            # parent script can continue to the Defender prompt at the end.
+            & shutdown.exe /a 2>$null
         }
 
         if (Test-EdgeInstalled) {
@@ -301,6 +304,7 @@ function Uninstall-Edge {
                 Write-Host "    Fallback setup : $($setup.FullName)"
                 $proc = Invoke-InstallerCommand -CommandLine $commandLine
                 Write-Host "    Exit code      : $($proc.ExitCode)"
+                & shutdown.exe /a 2>$null
 
                 if (-not (Test-EdgeInstalled)) {
                     break
@@ -448,6 +452,30 @@ function Uninstall-WebView2 {
 foreach ($procName in @('msedge', 'MicrosoftEdgeUpdate', 'widgets', 'msedgewebview2')) {
     Get-Process -Name $procName -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 }
+
+# Apply EdgeUpdate blocking policies early so they survive a reboot triggered by Edge's setup.exe.
+# If setup.exe reboots the system mid-uninstall, these policies prevent Edge/WebView2 from
+# reinstalling on the next boot before the script can complete.
+$edgeUpdatePath = 'HKLM:\SOFTWARE\Microsoft\EdgeUpdate'
+if (-not (Test-Path $edgeUpdatePath)) { New-Item -Path $edgeUpdatePath -Force | Out-Null }
+Set-ItemProperty -Path $edgeUpdatePath -Name 'DoNotUpdateToEdgeWithChromium' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+
+foreach ($key in $edgeUpdateDevKeys) {
+    if (-not (Test-Path $key)) { New-Item -Path $key -Force | Out-Null }
+    Set-ItemProperty -Path $key -Name AllowUninstall -Value '' -Type String -Force -ErrorAction SilentlyContinue
+}
+
+$allHives = @('HKLM:\SOFTWARE', 'HKLM:\SOFTWARE\WOW6432Node', 'HKCU:\Software')
+foreach ($sw in $allHives) {
+    $euPath = "$sw\Microsoft\EdgeUpdate"
+    if (-not (Test-Path $euPath)) { New-Item -Path $euPath -Force | Out-Null }
+    Set-ItemProperty -Path $euPath -Name "Install$webView2AppGuid" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $euPath -Name "Update$webView2AppGuid" -Value 2 -Type DWord -Force -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path $webView2BlockPolicyPath)) { New-Item -Path $webView2BlockPolicyPath -Force | Out-Null }
+Set-ItemProperty -Path $webView2BlockPolicyPath -Name $webView2InstallPolicy -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path $webView2BlockPolicyPath -Name $webView2UpdatePolicy -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+Write-Host "    Reinstall block : EdgeUpdate policies applied."
 
 $edgeInstalled = Test-EdgeInstalled
 $webView2Installed = Test-WebView2Installed

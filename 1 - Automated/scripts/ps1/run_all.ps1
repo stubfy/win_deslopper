@@ -385,14 +385,14 @@ if ($installNvInspector) {
 }
 
 # ── OPTIONS: physical uninstalls ──────────────────────────────────────────────
-if ($uninstallEdge) {
-    Write-Step "OPTION - Microsoft Edge + WebView2 Runtime uninstall"
-    Invoke-Script "$SCRIPTS\opt_edge_uninstall.ps1"
-}
-
 if ($uninstallOneDrive) {
     Write-Step "OPTION - OneDrive uninstall (Win32)"
     Invoke-Script "$SCRIPTS\opt_onedrive_uninstall.ps1"
+}
+
+if ($uninstallEdge) {
+    Write-Step "OPTION - Microsoft Edge + WebView2 Runtime uninstall"
+    Invoke-Script "$SCRIPTS\opt_edge_uninstall.ps1"
 }
 
 # ── Diff report ───────────────────────────────────────────────────────────────

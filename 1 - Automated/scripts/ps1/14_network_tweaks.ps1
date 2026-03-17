@@ -22,8 +22,7 @@
 #   rsc=disabled            : receive coalescing batches packets, adds latency -- off for gaming
 #   nonsackrttresiliency=disabled : removes extra RTT conservatism added by Windows
 #   maxsynretransmissions=2 : 2 SYN retries -- reasonable default (1 is too aggressive)
-#   minrto=300              : explicit default, guards against regressions
-#   congestionprovider=cubic : Windows 11 default, same as Linux -- no reason to change
+#   initialrto=300          : SYN retransmit time explicit default, guards against regressions
 #
 # LSO (Large Send Offload): offloads TCP segmentation to the NIC. Saves CPU at high
 # throughput but adds variable coalescing latency per batch. Disabled on active adapters.
@@ -54,8 +53,7 @@ netsh int tcp set global ecncapability=enabled 2>&1 | ForEach-Object { Write-Hos
 netsh int tcp set global rsc=disabled 2>&1 | ForEach-Object { Write-Host "    $_" }
 netsh int tcp set global nonsackrttresiliency=disabled 2>&1 | ForEach-Object { Write-Host "    $_" }
 netsh int tcp set global maxsynretransmissions=2 2>&1 | ForEach-Object { Write-Host "    $_" }
-netsh int tcp set global minrto=300 2>&1 | ForEach-Object { Write-Host "    $_" }
-netsh int tcp set global congestionprovider=cubic 2>&1 | ForEach-Object { Write-Host "    $_" }
+netsh int tcp set global initialrto=300 2>&1 | ForEach-Object { Write-Host "    $_" }
 Write-Host "    TCP global stack configured"
 
 # ── LSO disable ───────────────────────────────────────────────────────────────
