@@ -11,7 +11,8 @@
 # Registry parsing: the script reads tweaks_consolidated.reg, uwt_tweaks.reg
 # and personal_settings.reg
 # line-by-line and extracts every DWORD and string value. For each value it
-# records the BEFORE (current system value) and DESIRED (value the pack will set).
+# records the BEFORE (current system value) and DESIRED (value the pack will set),
+# including the GameDVR state keys used to keep Game Bar capture disabled.
 # Hex continuation lines (lines ending in \) are joined before parsing.
 # Keys that delete values (Name=-) and hex binary values are skipped since they
 # cannot be reliably compared numerically.
@@ -32,6 +33,10 @@ $REG_FILES  = @(
     (Join-Path $PSScriptRoot "tweaks_consolidated.reg")
     (Join-Path $PSScriptRoot "uwt_tweaks.reg")
     (Join-Path $PSScriptRoot "personal_settings.reg")
+)
+$REQUIRED_TRACKED_REGISTRY_VALUES = @(
+    'HKCU:\System\GameConfigStore|GameDVR_Enabled'
+    'HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR|GameDVR_Enabled'
 )
 $SNAP_FILE  = Join-Path $BACKUP_DIR "snapshot_latest.json"
 
@@ -140,6 +145,12 @@ foreach ($regFile in $REG_FILES) {
             $regEntries["$currentKey|(default)"] = @{ Path=$currentKey; Name='(default)'; Type='String'; Before=$before; Desired=$desired }
             continue
         }
+    }
+}
+
+foreach ($entryKey in $REQUIRED_TRACKED_REGISTRY_VALUES) {
+    if (-not $regEntries.Contains($entryKey)) {
+        Write-Host "    WARNING : expected tracked registry value missing: $entryKey" -ForegroundColor Yellow
     }
 }
 

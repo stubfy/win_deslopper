@@ -19,10 +19,10 @@ param(
 # is visible to both the SCM API and the raw registry simultaneously, avoiding
 # cases where one layer disagrees with the other after a failed Set-Service call.
 #
-# DoSvc (Delivery Optimization): Set to Manual AND its TriggerInfo sub-key is
+# DoSvc (Delivery Optimization): Set to Disabled AND its TriggerInfo sub-key is
 # removed. TriggerInfo causes SCM to automatically start DoSvc when certain
 # network events fire (e.g., ETW network connectivity trigger). Removing it
-# prevents DoSvc from starting in the background to peer-share Windows updates.
+# prevents SCM from relaunching DoSvc behind our back after Start=4 is applied.
 # This is intentional redundancy on top of DODownloadMode=0 in 12_ai_disable.ps1.
 #
 # Rollback: restore\02_services.ps1 reads backup\services_state.json and
@@ -65,6 +65,7 @@ function Get-ServiceStartupCatalog {
         'AssignedAccessManagerSvc'
         'DiagTrack'
         'dmwappushservice'
+        'DoSvc'
         'DPS'
         'lfsvc'
         'MapsBroker'
@@ -136,10 +137,6 @@ function Get-ServiceStartupCatalog {
         # --- Diagnostics ---
         'diagsvc'         # Diagnostic Execution Service: runs interactive diagnostic steps
         'DisplayEnhancementService' # Manages display brightness / color profile on supported panels
-
-        # --- Delivery Optimization ---
-        # DoSvc is handled separately below (TriggerInfo removal).
-        'DoSvc'           # Delivery Optimization: P2P/WLAN update distribution
 
         # --- 802.1x / EAP ---
         'dot3svc'         # Wired 802.1x authentication
@@ -281,8 +278,13 @@ function Get-ServiceStartupCatalog {
         'SensorService'   # Manages sensor hardware on the machine
         'SensrSvc'        # Monitors simple sensors (brightness, orientation)
 
-        # --- Remote Desktop ---
+        # --- IPsec ---
+        'IKEEXT'          # IKE/AuthIP: key exchange for IPsec connections (unused without IPsec VPN)
+
+        # --- Remote Desktop / Imaging ---
         'SessionEnv'      # Remote Desktop Configuration
+        'StiSvc'          # Windows Image Acquisition (scanners)
+        'TermService'     # Remote Desktop Services: keep Manual to avoid exposing 3389 at boot
         'UmRdpService'    # Remote Desktop Services UserMode Port Redirector
 
         # --- Storage Migration ---
@@ -403,10 +405,7 @@ function Get-ServiceStartupCatalog {
     # These are either security infrastructure, hardware support or core UX.
     $automatic = @(
         'DeviceAssociationService' # Pairs devices that use pairing protocols (Bluetooth, USB accessories)
-        'IKEEXT'          # IKE/AuthIP: key exchange for IPsec connections (used by some VPN apps)
         'InstallService'  # Microsoft Store installation infrastructure
-        'StiSvc'          # Windows Image Acquisition (scanners)
-        'TermService'     # Remote Desktop Services -- keep Automatic if RDP is needed
         'VaultSvc'        # Credential Vault: stores encrypted credentials for apps and Windows
         'W32Time'         # Windows Time: NTP synchronization (keeps system clock accurate)
         'wuauserv'        # Windows Update Agent: managed separately by 15_windows_update.ps1
@@ -476,7 +475,7 @@ function Get-ServiceStartupCatalog {
         Manual                 = $manual
         Automatic              = $automatic
         AutomaticDelayedStart  = $automaticDelayedStart
-        TriggerlessManual      = @('DoSvc')
+        TriggerlessDisabled    = @('DoSvc')
         Defaults               = $defaults
         Tracked                = @($disabled + $manual + $automatic + $automaticDelayedStart)
         DiffExcluded           = @('BITS', 'UsoSvc', 'wuauserv')
@@ -531,6 +530,8 @@ if ($ExportCatalogOnly) {
 $serviceCatalog = Get-ServiceStartupCatalog
 
 foreach ($svc in $serviceCatalog.Disabled) {
+    if ($svc -in $serviceCatalog.TriggerlessDisabled) { continue }
+
     if (Set-ServiceStartupTypeExact -Name $svc -StartupType 'Disabled') {
         Write-Host "    [DISABLED]   $svc"
     } else {
@@ -565,20 +566,20 @@ foreach ($svc in $serviceCatalog.AutomaticDelayedStart) {
 }
 
 # DoSvc (Delivery Optimization) special case:
-# Set to Manual AND remove TriggerInfo to prevent SCM from starting it
+# Set to Disabled AND remove TriggerInfo to prevent SCM from starting it
 # automatically on network-connectivity ETW events. Without removing TriggerInfo
-# the service will auto-restart within minutes despite being set to Manual.
+# the service can relaunch itself even after the startup type is changed.
 # This is intentionally redundant with DODownloadMode=0 in 12_ai_disable.ps1:
 # the registry policy blocks P2P downloading, TriggerInfo removal prevents the
 # process from ever running in the background to check for work.
 $doSvc = Get-Service 'DoSvc' -ErrorAction SilentlyContinue
 if ($doSvc) {
-    Set-ServiceStartupTypeExact -Name 'DoSvc' -StartupType 'Manual' | Out-Null
+    Set-ServiceStartupTypeExact -Name 'DoSvc' -StartupType 'Disabled' | Out-Null
     $triggerPath = 'HKLM:\SYSTEM\CurrentControlSet\Services\DoSvc\TriggerInfo'
     if (Test-Path $triggerPath) {
         Remove-Item $triggerPath -Recurse -Force -ErrorAction SilentlyContinue
     }
-    Write-Host "    [MANUAL]     DoSvc (TriggerInfo removed)"
+    Write-Host "    [DISABLED]   DoSvc (TriggerInfo removed)"
 } else {
     Write-Host "    [NOT FOUND]  DoSvc" -ForegroundColor Gray
 }

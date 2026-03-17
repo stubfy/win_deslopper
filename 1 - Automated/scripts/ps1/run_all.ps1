@@ -233,7 +233,7 @@ Invoke-Script "$SCRIPTS\05_power.ps1"
 Write-Step "PHASE B.5 - Cloudflare DNS (1.1.1.1 / 1.0.0.1)"
 Invoke-Script "$SCRIPTS\06_dns.ps1"
 
-Write-Step "PHASE B.6 - Microsoft Edge policies"
+Write-Step "PHASE B.6 - Microsoft Edge placeholder (no policies)"
 Invoke-Script "$SCRIPTS\07_edge.ps1"
 
 Write-Step "PHASE B.7 - Remove bloatware UWP apps"

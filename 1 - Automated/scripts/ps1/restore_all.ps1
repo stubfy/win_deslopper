@@ -15,7 +15,7 @@
       02_services.ps1     - Reads backup\services_state.json and restores each service
       03_bcdedit.ps1      - Removes disabledynamictick and bootmenupolicy BCD entries
       04_dns.ps1          - Restores DHCP-assigned DNS on all interfaces
-      05_edge.ps1         - Removes HKLM\...\Policies\Microsoft\Edge policy key
+      05_edge.ps1         - Reserved no-op (Edge policy step removed from the pack)
       06_timer.ps1        - Deletes startup shortcut, terminates SetTimerResolution
       07_power.ps1        - Removes the duplicated Ultimate Performance plan
       08_usb.ps1          - Re-enables USB selective suspend
@@ -85,7 +85,7 @@ Invoke-Script "$RESTORE\03_bcdedit.ps1"
 Write-Step "Restore DNS (automatic DHCP)"
 Invoke-Script "$RESTORE\04_dns.ps1"
 
-Write-Step "Remove Microsoft Edge policies"
+Write-Step "Microsoft Edge placeholder rollback (no policies)"
 Invoke-Script "$RESTORE\05_edge.ps1"
 
 Write-Step "Remove SetTimerResolution from startup"

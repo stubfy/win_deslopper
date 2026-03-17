@@ -101,7 +101,7 @@ The manual folders still contain a `readme.txt` with detailed instructions.
 | `04_bcdedit.ps1` | Boot configuration (dynamictick, legacy menu) |
 | `05_power.ps1` | Ultimate Performance power plan + Bitsum values |
 | `06_dns.ps1` | Cloudflare DNS (1.1.1.1 / 1.0.0.1) |
-| `07_edge.ps1` | Microsoft Edge policies |
+| `07_edge.ps1` | Reserved no-op step. Edge is only handled through `opt_edge_uninstall.ps1` / `opt_edge_restore.ps1` |
 | `08_debloat.ps1` | UWP app removal (Teams, Microsoft 365, Family, Quick Assist, Sticky Notes...) |
 | `09_oosu10.ps1` | O&O ShutUp10++ silent mode (240 tweaks) |
 | `10_timer.ps1` | Optional SetTimerResolution at startup (~0.5 ms), installs VC++ x64 runtime if missing |
@@ -214,8 +214,8 @@ To undo: `restore_affinity.bat` in the same folder.
 ### Service startup tweaks
 
 `03_services.ps1` matches the startup types from the reference main PC.
-Noisy stuff like `SysMain`, `DPS`, `DiagTrack`, `WSearch` gets disabled. Most secondary services stay `Manual`. A few stay `Automatic` on purpose (`wuauserv`, `W32Time`, `TermService`, etc.). `UsoSvc` is `AutomaticDelayedStart`.
-`DoSvc` is set to `Manual` with its `TriggerInfo` removed.
+Noisy stuff like `SysMain`, `DPS`, `DiagTrack`, `WSearch` gets disabled. Most secondary services stay `Manual`, including `IKEEXT`, `StiSvc` and `TermService`. A small core stays `Automatic` on purpose (`DeviceAssociationService`, `InstallService`, `VaultSvc`, `W32Time`, `wuauserv`). `UsoSvc` is `AutomaticDelayedStart`.
+`DoSvc` is `Disabled`, and its `TriggerInfo` key is removed so SCM cannot quietly bring it back.
 
 ### Logging
 
@@ -287,7 +287,7 @@ Restores in order:
 - Services (back to default values)
 - Boot configuration (bcdedit)
 - DNS (back to DHCP)
-- Edge policies (keys deleted)
+- Edge placeholder step (no policies to remove)
 - SetTimerResolution (startup shortcut removed)
 - Power plan (back to Balanced)
 - USB selective suspend (restored)
@@ -348,6 +348,7 @@ win_deslopper/
 |-|------|
 | **Defender disabled** | No real-time antivirus protection. On 25H2, Tamper Protection may block disabling even in Safe Mode. |
 | **Edge / WebView2 uninstall** | Uses the current WinUtil-style dummy-file flow for Edge, then tries to remove the WebView2 Runtime. On Windows 11 or with apps that depend on WebView2, the runtime can come back later. |
+| **Fullscreen Optimizations (FSO)** | The pack does not blanket-disable FSO. Results move around too much from one game and GPU stack to another, so if you want to test it, do it per game from the executable properties. |
 | **VBS/HVCI disabled** | Credential Guard and memory protections are off. Good perf gain, but you lose some security hardening. |
 | **MSI Utils** | Do not enable MSI on audio controllers, capture cards (ELGATO) or legacy USB - BSOD risk. |
 | **Interrupt Affinity** | The automated script detects the GPU chain and pins to core 2. On AMD, the Root Complex appears as ACPI -- normal, GPU + Bridge is applied and is sufficient. NVIDIA driver updates silently reset this -- re-run `set_affinity.bat` after each update. |
