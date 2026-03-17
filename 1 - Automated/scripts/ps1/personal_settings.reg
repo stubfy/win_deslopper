@@ -44,6 +44,7 @@ Windows Registry Editor Version 5.00
 "LaunchTo"=dword:00000001
 "TaskbarAl"=dword:00000000
 "TaskbarAnimations"=dword:00000000
+"TaskbarEndTask"=dword:00000002
 "ListviewAlphaSelect"=dword:00000001
 "ListviewShadow"=dword:00000001
 "IconsOnly"=dword:00000000
