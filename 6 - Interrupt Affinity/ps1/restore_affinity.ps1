@@ -11,7 +11,7 @@
 
 $ErrorActionPreference = 'Continue'
 
-$PACK_ROOT  = Split-Path $PSScriptRoot -Parent
+$PACK_ROOT  = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $BACKUP_DIR = Join-Path $PACK_ROOT "1 - Automated\backup"
 $STATE_FILE = Join-Path $BACKUP_DIR "affinity_state.json"
 

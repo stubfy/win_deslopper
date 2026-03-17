@@ -23,7 +23,7 @@ param(
 
 $ErrorActionPreference = 'Continue'
 
-$SCRIPT_DIR = $PSScriptRoot
+$SCRIPT_DIR = Split-Path $PSScriptRoot -Parent
 if ($StateFile -eq '') {
     $StateFile = Join-Path $SCRIPT_DIR "msi_state.json"
 }

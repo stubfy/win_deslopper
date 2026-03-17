@@ -122,7 +122,7 @@ Write-Step "Restore mouse acceleration curves (Windows default)"
 Invoke-Script "$RESTORE\17_mouse_accel.ps1"
 
 Write-Step "Restore GPU interrupt affinity (Windows default)"
-Invoke-Script (Join-Path $AFFINITY_DIR "restore_affinity.ps1")
+Invoke-Script (Join-Path $AFFINITY_DIR "ps1\restore_affinity.ps1")
 
 # Scheduled tasks
 Write-Host ""

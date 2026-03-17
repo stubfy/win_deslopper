@@ -51,13 +51,13 @@ if ($gpu.FriendlyName -notmatch 'NVIDIA') {
     return
 }
 
-$sourceDir = Get-ChildItem -Path $PSScriptRoot -Directory -ErrorAction SilentlyContinue |
+$sourceDir = Get-ChildItem -Path (Split-Path $PSScriptRoot -Parent) -Directory -ErrorAction SilentlyContinue |
     Where-Object { Test-Path (Join-Path $_.FullName 'NVPI-R.exe') } |
     Sort-Object Name -Descending |
     Select-Object -First 1
 
 if (-not $sourceDir) {
-    Write-Host "    [WARN] NVPI-R.exe source folder not found in $PSScriptRoot" -ForegroundColor Yellow
+    Write-Host "    [WARN] NVPI-R.exe source folder not found in $(Split-Path $PSScriptRoot -Parent)" -ForegroundColor Yellow
     return
 }
 

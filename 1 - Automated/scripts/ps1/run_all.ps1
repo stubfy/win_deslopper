@@ -345,7 +345,7 @@ Invoke-Script "$SCRIPTS\17_mouse_accel.ps1"
 
 if ($setInterruptAffinity) {
     Write-Step "PHASE B.19 - GPU interrupt affinity (pin to core 2)"
-    Invoke-Script (Join-Path $AFFINITY_DIR "set_affinity.ps1") @{SkipReboot = $true}
+    Invoke-Script (Join-Path $AFFINITY_DIR "ps1\set_affinity.ps1") @{SkipReboot = $true}
 } else {
     Write-Step "PHASE B.19 - GPU interrupt affinity (skipped)"
     Write-Host "    Skipped        : run 6 - Interrupt Affinity\set_affinity.bat after NVIDIA updates"
@@ -363,7 +363,7 @@ if (Test-Path $msiStateFile) {
 
     $ans = Read-Host "  Apply saved MSI configuration? (Y/N) [default: Y]"
     if ($ans -eq '' -or $ans -ieq 'Y') {
-        $restoreScript = Join-Path $MSI_UTILS_DIR "msi_restore.ps1"
+        $restoreScript = Join-Path $MSI_UTILS_DIR "ps1\msi_restore.ps1"
         & $restoreScript -StateFile $msiStateFile -SkipConfirm
         Write-Log "MSI state restored from snapshot" 'OK'
         $msiStateApplied = $true
@@ -381,7 +381,7 @@ if (Test-Path $msiStateFile) {
 
 if ($installNvInspector) {
     Write-Step "PHASE B.21 - NVIDIA Profile Inspector install"
-    Invoke-Script (Join-Path $NVINSPECTOR_DIR 'install_nvinspector.ps1')
+    Invoke-Script (Join-Path $NVINSPECTOR_DIR 'ps1\install_nvinspector.ps1')
 }
 
 # ── OPTIONS: physical uninstalls ──────────────────────────────────────────────
@@ -446,7 +446,7 @@ if ($restart -eq '') { $restart = 'N' }
 if ($restart -ieq 'S') {
     Write-Log "Safe Mode reboot requested by user." 'INFO'
 
-    $defenderLauncher = Join-Path $DEFENDER_DIR 'run_defender.ps1'
+    $defenderLauncher = Join-Path $DEFENDER_DIR 'ps1\run_defender.ps1'
     if (-not (Test-Path $defenderLauncher)) {
         Write-Host ""
         Write-Host "  ERROR: Defender launcher not found." -ForegroundColor Red

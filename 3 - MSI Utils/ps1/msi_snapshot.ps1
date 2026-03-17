@@ -23,7 +23,7 @@
 
 $ErrorActionPreference = 'Continue'
 
-$SCRIPT_DIR = $PSScriptRoot
+$SCRIPT_DIR = Split-Path $PSScriptRoot -Parent
 $STATE_FILE    = Join-Path $SCRIPT_DIR "msi_state.json"
 $BACKUP_FILE   = Join-Path $SCRIPT_DIR "msi_state_backup.json"
 $PREVIOUS_FILE = Join-Path $SCRIPT_DIR "msi_state_previous.json"

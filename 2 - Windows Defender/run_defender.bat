@@ -4,5 +4,5 @@ if %errorlevel% neq 0 (
     powershell -Command "Start-Process '%~f0' -Verb RunAs"
     exit /b
 )
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0run_defender.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0ps1\run_defender.ps1"
 pause
