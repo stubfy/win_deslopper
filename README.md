@@ -76,6 +76,7 @@ You will be prompted for a few options before anything runs:
 - **Uninstall OneDrive** (optional), default: Yes
 - **Disable Windows Firewall profiles** (optional), default: Yes
 - **Enable SetTimerResolution at startup** (optional), default: Yes. If you already use Process Lasso, you can skip it.
+- **Install NVIDIA Profile Inspector to `%APPDATA%\win_deslopper` + Desktop shortcut** (NVIDIA GPU only), default: Yes
 - **Pin GPU interrupt affinity to core 2** (optional), default: Yes. Re-run `6 - Interrupt Affinity/set_affinity.bat` after each NVIDIA driver update.
 
 Estimated duration: 5 to 15 minutes. A reboot prompt is shown at the end.
@@ -85,7 +86,7 @@ If you pick `[S]`, Safe Mode gets configured and a `Disable Defender and Return 
 
 **3. Follow the manual steps in order (`2 - Windows Defender/run_defender.bat` if you did not choose `[S]`, then folders 3, 4, 5, 6, then NIC Device Manager tweaks, then `Tools/`)**
 
-The manual folders still contain a `readme.txt` with detailed instructions.
+The manual folders still contain guidance files where needed.
 
 ---
 
@@ -117,6 +118,8 @@ The manual folders still contain a `readme.txt` with detailed instructions.
 | `set_affinity.ps1` | GPU interrupt chain pinned to core 2 (GPU, PCI Bridge, Root Complex) |
 
 Defender is handled manually from `2 - Windows Defender/`. Picking `[S]` at the reboot prompt just sets up Safe Mode and drops the helper `.bat` on your Desktop so you're ready after reboot.
+
+On systems with an NVIDIA GPU, `run_all.ps1` can also copy NVInspector to `%APPDATA%\win_deslopper\NVInspector` and create a Desktop shortcut to `NVPI-R.exe`. The same action remains available manually through `4 - NVInspector/install_nvinspector.bat`.
 
 ### Windows Update profiles
 
@@ -239,7 +242,7 @@ To be done in order after rebooting. The Defender step is back in its own manual
 |------|------|-----------|------------|
 | 1 | **2 - Windows Defender/run_defender.bat** | Requires Safe Mode; PPL and Tamper Protection block full disable in normal mode | High |
 | 2 | **3 - MSI Utils** | Manual identification of compatible devices required on first run | Moderate |
-| 3 | **4 - NVInspector** | Per-game NVIDIA driver profiles, user-specific | Low |
+| 3 | **4 - NVInspector** | `run_all.bat` can install NVInspector to `%APPDATA%\win_deslopper` and add a Desktop shortcut. Profile tuning remains manual. | Low |
 | 4 | **5 - Device Manager** | USB power saving per device node, not cleanly scriptable | Low |
 | 5 | **6 - Interrupt Affinity** | Automated by `set_affinity.bat`. Re-run after each NVIDIA driver update (driver resets the setting). | Low |
 | 6 | **NIC Device Manager** | Hardware-dependent NIC settings: disable Interrupt Moderation, EEE, Flow Control, Wake-on-*, LSO V2; max Receive/Transmit Buffers; uncheck power management. Keep Checksum Offload enabled and Speed/Duplex on Auto-Negotiation. | Low |
@@ -332,6 +335,9 @@ win_deslopper/
 │
 ├── 3 - MSI Utils/
 ├── 4 - NVInspector/
+│   ├── install_nvinspector.bat
+│   ├── install_nvinspector.ps1
+│   └── nvpi-revamped-*/
 ├── 5 - Gestionnaire/
 ├── 6 - Interrupt Affinity/
 └── Tools/

@@ -53,9 +53,10 @@ $ErrorActionPreference = 'Continue'
 $ROOT         = Split-Path (Split-Path (Split-Path $MyInvocation.MyCommand.Path))
 $PACK_ROOT    = Split-Path $ROOT -Parent
 $SCRIPTS      = $PSScriptRoot
-$DEFENDER_DIR  = Join-Path $PACK_ROOT "2 - Windows Defender"
-$MSI_UTILS_DIR = Join-Path $PACK_ROOT "3 - MSI Utils"
-$AFFINITY_DIR  = Join-Path $PACK_ROOT "6 - Interrupt Affinity"
+$DEFENDER_DIR    = Join-Path $PACK_ROOT "2 - Windows Defender"
+$MSI_UTILS_DIR   = Join-Path $PACK_ROOT "3 - MSI Utils"
+$NVINSPECTOR_DIR = Join-Path $PACK_ROOT "4 - NVInspector"
+$AFFINITY_DIR    = Join-Path $PACK_ROOT "6 - Interrupt Affinity"
 $PACK_VERSION = 'v0.8'
 $LOG_DIR      = Join-Path $env:APPDATA 'win_deslopper\logs'
 $LOG_FILE     = Join-Path $LOG_DIR "win_deslopper.log"
@@ -107,6 +108,41 @@ function Invoke-Script {
     }
 }
 
+function Get-PreferredDisplayGpu {
+    $allGpus = @()
+    if (Get-Command Get-PnpDevice -ErrorAction SilentlyContinue) {
+        $allGpus = Get-PnpDevice -Class Display -Status OK -ErrorAction SilentlyContinue |
+            Where-Object { $_.InstanceId -match '^PCI\\' }
+    }
+
+    if (-not $allGpus) {
+        $allGpus = Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue |
+            Where-Object { $_.PNPDeviceID -match '^PCI\\' } |
+            ForEach-Object {
+                [PSCustomObject]@{
+                    FriendlyName = $_.Name
+                    InstanceId   = $_.PNPDeviceID
+                }
+            }
+    }
+
+    if (-not $allGpus) {
+        return $null
+    }
+
+    $igpuPattern = 'Intel.*(UHD|Iris|HD Graphics)|Microsoft Basic Display'
+    $dGpus = $allGpus | Where-Object { $_.FriendlyName -notmatch $igpuPattern }
+    if (-not $dGpus) {
+        $dGpus = $allGpus
+    }
+
+    $gpu = $dGpus | Where-Object { $_.FriendlyName -match 'NVIDIA' } | Select-Object -First 1
+    if (-not $gpu) { $gpu = $dGpus | Where-Object { $_.FriendlyName -match 'AMD|Radeon' } | Select-Object -First 1 }
+    if (-not $gpu) { $gpu = $dGpus | Select-Object -First 1 }
+
+    return $gpu
+}
+
 # ── Header ─────────────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "  win_deslopper v0.8" -ForegroundColor Cyan
@@ -135,7 +171,13 @@ $uninstallEdge     = $true
 $uninstallOneDrive = $true
 $disableFirewall   = $true
 $enableTimerTool   = $true
+$installNvInspector = $false
 $updateProfil      = '2'   # default: security only
+$nvInspectorBaseDir = Join-Path $env:APPDATA 'win_deslopper'
+$nvInspectorExe    = Join-Path $nvInspectorBaseDir 'NVInspector\NVPI-R.exe'
+$nvInspectorShortcut = Join-Path ([System.Environment]::GetFolderPath('Desktop')) 'NVIDIA Profile Inspector.lnk'
+$preferredGpu = Get-PreferredDisplayGpu
+$hasNvidiaGpu = $null -ne $preferredGpu -and $preferredGpu.FriendlyName -match 'NVIDIA'
 
 Write-Host "  WINDOWS UPDATE PROFILE:" -ForegroundColor White
 Write-Host "    [1] Maximum  - All updates (security, quality, drivers, feature updates)" -ForegroundColor Green
@@ -194,6 +236,26 @@ if ($ans -ieq 'N') {
     Write-Host "  -> SetTimerResolution will be installed to user startup." -ForegroundColor Yellow
     Write-Host "     Skip this if Process Lasso already manages the system timer resolution." -ForegroundColor DarkGray
     Write-Log "Option selected: SetTimerResolution startup = YES" 'INFO'
+}
+
+if ($hasNvidiaGpu) {
+    Write-Host "  NVIDIA GPU detected: $($preferredGpu.FriendlyName)" -ForegroundColor Green
+    $ans = Read-Host "  Install NVIDIA Profile Inspector to $nvInspectorBaseDir and create a Desktop shortcut? (Y/N) [default: Y]"
+    if ($ans -ieq 'N') {
+        Write-Host "  -> Skipping. Run 4 - NVInspector\install_nvinspector.bat manually." -ForegroundColor Yellow
+        Write-Log "Option selected: NVInspector install = NO" 'INFO'
+    } else {
+        $installNvInspector = $true
+        Write-Host "  -> NVIDIA Profile Inspector will be copied to $nvInspectorBaseDir\NVInspector." -ForegroundColor Yellow
+        Write-Host "     A Desktop shortcut to NVPI-R.exe will be created." -ForegroundColor DarkGray
+        Write-Log "Option selected: NVInspector install = YES" 'INFO'
+    }
+} elseif ($preferredGpu) {
+    Write-Host "  -> Skipping NVIDIA Profile Inspector: detected GPU is $($preferredGpu.FriendlyName)." -ForegroundColor DarkGray
+    Write-Log "Option auto-skipped: NVInspector install (GPU not NVIDIA: $($preferredGpu.FriendlyName))" 'INFO'
+} else {
+    Write-Host "  -> Skipping NVIDIA Profile Inspector: no compatible PCI display device detected." -ForegroundColor DarkGray
+    Write-Log "Option auto-skipped: NVInspector install (no compatible display GPU detected)" 'INFO'
 }
 
 $setInterruptAffinity = $true
@@ -317,6 +379,11 @@ if (Test-Path $msiStateFile) {
     Write-Log "Skipped: MSI restore (no msi_state.json found)" 'INFO'
 }
 
+if ($installNvInspector) {
+    Write-Step "PHASE B.21 - NVIDIA Profile Inspector install"
+    Invoke-Script (Join-Path $NVINSPECTOR_DIR 'install_nvinspector.ps1')
+}
+
 # ── OPTIONS: physical uninstalls ──────────────────────────────────────────────
 if ($uninstallEdge) {
     Write-Step "OPTION - Microsoft Edge + WebView2 Runtime uninstall"
@@ -349,7 +416,13 @@ if ($msiStateApplied) {
         Write-Host "     -> After configuring, run msi_snapshot.bat to save settings for next time." -ForegroundColor DarkGray
     }
 }
-Write-Host "  4. NVIDIA Profile Inspector - per-game       (4 - NVInspector/)"
+if ($installNvInspector -and (Test-Path $nvInspectorExe) -and (Test-Path $nvInspectorShortcut)) {
+    Write-Host "  4. NVIDIA Profile Inspector - installed, Desktop shortcut created" -ForegroundColor Green
+} elseif ($hasNvidiaGpu) {
+    Write-Host "  4. NVIDIA Profile Inspector - run install_nvinspector.bat (4 - NVInspector/)" -ForegroundColor Yellow
+} else {
+    Write-Host "  4. NVIDIA Profile Inspector - skipped (no NVIDIA GPU detected)" -ForegroundColor DarkGray
+}
 Write-Host "  5. Device Manager - disable USB power saving (5 - Gestionnaire/)"
 Write-Host "  6. Interrupt Affinity - re-run set_affinity.bat after each NVIDIA driver update"
 Write-Host "  7. NIC settings - disable offloads, buffers  (7 - Network WIP/)"
