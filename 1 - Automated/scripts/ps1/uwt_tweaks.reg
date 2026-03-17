@@ -259,6 +259,38 @@ Windows Registry Editor Version 5.00
 "LetAppsAccessAccountInfo"=dword:00000002
 
 ; ---------------------------------------------------------------------------
+; SMARTSCREEN / APP & BROWSER CONTROL
+; ---------------------------------------------------------------------------
+
+; EnableSmartScreen=0 (policy): Disables the "Check apps and files" SmartScreen
+; reputation filter (App & browser control panel). SmartScreen queries Microsoft's
+; reputation service on every downloaded executable, sending file hash telemetry
+; and adding latency to first-launch. Policy key greys out the toggle in Settings
+; so it cannot be re-enabled without removing the policy.
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\System]
+"EnableSmartScreen"=dword:00000000
+
+; EnableWebContentEvaluation=0: Disables SmartScreen reputation checks for
+; Microsoft Store apps (the "SmartScreen for Microsoft Store apps" toggle).
+; Store apps can trigger reputation lookups on web content they load internally;
+; this stops those outbound calls.
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost]
+"EnableWebContentEvaluation"=dword:00000000
+
+; Enhanced Phishing Protection (WTDS -- Windows Threat Defense Service).
+; Windows Defender SmartScreen credential and password monitor introduced in 22H2.
+; Watches for password reuse, unsafe credential storage and phishing sites by
+; hooking the credential manager and browser input fields.
+; ServiceEnabled=0 disables the subsystem entirely. The four sub-flags are also
+; zeroed so the individual checkboxes in Settings reflect the Off state correctly.
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\WTDS\Components]
+"ServiceEnabled"=dword:00000000
+"NotifyMalicious"=dword:00000000
+"NotifyPasswordReuse"=dword:00000000
+"NotifyUnsafeApp"=dword:00000000
+"CaptureThreatWindow"=dword:00000000
+
+; ---------------------------------------------------------------------------
 ; CONTEXT MENU - REMOVALS (Shell Extensions Blocked)
 ; ---------------------------------------------------------------------------
 

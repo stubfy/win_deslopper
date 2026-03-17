@@ -136,6 +136,23 @@ Windows Registry Editor Version 5.00
 "LetAppsAccessAccountInfo"=-
 
 ; ---------------------------------------------------------------------------
+; SMARTSCREEN / APP & BROWSER CONTROL
+; ---------------------------------------------------------------------------
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\System]
+"EnableSmartScreen"=-
+
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost]
+"EnableWebContentEvaluation"=dword:00000001
+
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\WTDS\Components]
+"ServiceEnabled"=dword:00000001
+"NotifyMalicious"=dword:00000001
+"NotifyPasswordReuse"=dword:00000000
+"NotifyUnsafeApp"=dword:00000000
+"CaptureThreatWindow"=dword:00000001
+
+; ---------------------------------------------------------------------------
 ; CONTEXT MENU - REMOVALS (unblock shell extensions)
 ; ---------------------------------------------------------------------------
 
