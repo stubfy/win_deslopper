@@ -26,6 +26,26 @@ function Set-QuietHoursPolicyDisabled {
     Write-Host "    [SET] Automatic Do Not Disturb rules disabled via QuietHours policy"
 }
 
+function Set-ClassicAltTab {
+    $explorerPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer'
+    if (-not (Test-Path $explorerPath)) {
+        New-Item -Path $explorerPath -Force | Out-Null
+    }
+
+    New-ItemProperty -Path $explorerPath -Name 'AltTabSettings' -PropertyType DWord -Value 1 -Force | Out-Null
+
+    $policyPath = 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\Explorer'
+    if (Test-Path $policyPath) {
+        Remove-ItemProperty -Path $policyPath -Name 'MultiTaskingAltTabFilter' -ErrorAction SilentlyContinue
+        $remainingValues = (Get-Item -Path $policyPath -ErrorAction SilentlyContinue).Property
+        if (-not $remainingValues -or $remainingValues.Count -eq 0) {
+            Remove-Item -Path $policyPath -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    Write-Host "    [SET] Classic Alt+Tab enabled"
+}
+
 function Refresh-UserPolicy {
     $result = Start-Process -FilePath "$env:SystemRoot\System32\gpupdate.exe" `
         -ArgumentList '/target:user /force' `
@@ -99,6 +119,7 @@ function Refresh-UserShell {
     Write-Host "    [SET] User shell parameters refreshed"
 }
 
+Set-ClassicAltTab
 Set-QuietHoursPolicyDisabled
 Refresh-UserPolicy
 Set-DesktopWallpaper -Path ''

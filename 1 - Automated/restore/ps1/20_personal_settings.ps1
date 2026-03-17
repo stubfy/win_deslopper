@@ -27,6 +27,24 @@ function Restore-QuietHoursPolicyDefault {
     Write-Host "    [SET] Automatic Do Not Disturb policy restored to Windows default"
 }
 
+function Restore-AltTabDefault {
+    $explorerPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer'
+    if (Test-Path $explorerPath) {
+        Remove-ItemProperty -Path $explorerPath -Name 'AltTabSettings' -ErrorAction SilentlyContinue
+    }
+
+    $policyPath = 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\Explorer'
+    if (Test-Path $policyPath) {
+        Remove-ItemProperty -Path $policyPath -Name 'MultiTaskingAltTabFilter' -ErrorAction SilentlyContinue
+        $remainingValues = (Get-Item -Path $policyPath -ErrorAction SilentlyContinue).Property
+        if (-not $remainingValues -or $remainingValues.Count -eq 0) {
+            Remove-Item -Path $policyPath -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    Write-Host "    [SET] Alt+Tab restored to Windows default"
+}
+
 function Refresh-UserPolicy {
     $result = Start-Process -FilePath "$env:SystemRoot\System32\gpupdate.exe" `
         -ArgumentList '/target:user /force' `
@@ -94,6 +112,7 @@ function Refresh-UserShell {
     Write-Host "    [SET] User shell parameters refreshed"
 }
 
+Restore-AltTabDefault
 Restore-QuietHoursPolicyDefault
 Refresh-UserPolicy
 $defaultWallpaper = if (Test-Path "$env:SystemRoot\Web\Wallpaper\Windows\img0.jpg") {

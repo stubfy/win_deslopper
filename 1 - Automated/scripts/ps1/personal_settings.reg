@@ -15,14 +15,14 @@ Windows Registry Editor Version 5.00
 ; ShowFrequent/ShowRecent=0: Hide "Frequent" and "Recent" from Quick Access.
 ; ShowCloudFilesInQuickAccess=0: Hide Office.com/account-based files from Home.
 ; link=hex:00,00,00,00: Remove the " - Shortcut" suffix from new shortcuts.
-; AltTabSettings=-: Keep the standard Windows 11 Alt+Tab behavior.
+; AltTabSettings=1: Use the classic Alt+Tab switcher.
 [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer]
 "EnableAutoTray"=dword:00000000
 "ShowFrequent"=dword:00000000
 "ShowRecent"=dword:00000000
 "ShowCloudFilesInQuickAccess"=dword:00000000
 "link"=hex:00,00,00,00
-"AltTabSettings"=-
+"AltTabSettings"=dword:00000001
 
 ; HideNewAppNotification=1: Hide "a new app was installed" toasts.
 ; ShowSecondsInSystemClock=1: Add seconds to the taskbar clock.
@@ -105,7 +105,7 @@ Windows Registry Editor Version 5.00
 [HKEY_CURRENT_USER\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\QuietHours]
 "Enable"=dword:00000001
 
-; MultiTaskingAltTabFilter=3: Show open windows and the 3 most recent app tabs
-; in Alt+Tab and Snap Assist.
+; MultiTaskingAltTabFilter=-: Remove the modern Alt+Tab tab filter policy so the
+; classic Alt+Tab switcher is not overridden by the Windows 11 multitasking UI.
 [HKEY_CURRENT_USER\SOFTWARE\Policies\Microsoft\Windows\Explorer]
-"MultiTaskingAltTabFilter"=dword:00000003
+"MultiTaskingAltTabFilter"=-
