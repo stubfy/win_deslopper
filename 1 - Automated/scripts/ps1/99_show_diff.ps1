@@ -201,7 +201,6 @@ if ($snap.Network) {
         rsc                  = 'disabled'
         nonsackrttresiliency = 'disabled'
         maxsynretransmissions = '2'
-        congestionprovider   = 'cubic'
     }
 
     # Read current TCP global state

@@ -225,16 +225,14 @@ if ($ans -ieq 'N') {
     Write-Log "Option selected: Firewall disable = YES" 'INFO'
 }
 
+Write-Host "     Skip this if Process Lasso already manages the system timer resolution." -ForegroundColor DarkGray
 $ans = Read-Host "  Enable SetTimerResolution at startup (~0.52 ms)? (Y/N) [default: Y]"
 if ($ans -ieq 'N') {
     $enableTimerTool = $false
-    Write-Host "  -> Skipping SetTimerResolution. If you already use Process Lasso," -ForegroundColor Yellow
-    Write-Host "     use Options > Tools > System Timer Resolution instead (see README)." -ForegroundColor DarkGray
     Write-Log "Option selected: SetTimerResolution startup = NO" 'INFO'
 } else {
     $enableTimerTool = $true
     Write-Host "  -> SetTimerResolution will be installed to user startup." -ForegroundColor Yellow
-    Write-Host "     Skip this if Process Lasso already manages the system timer resolution." -ForegroundColor DarkGray
     Write-Log "Option selected: SetTimerResolution startup = YES" 'INFO'
 }
 
@@ -259,6 +257,7 @@ if ($hasNvidiaGpu) {
 }
 
 $setInterruptAffinity = $true
+Write-Host "     Re-run set_affinity.bat after each NVIDIA driver update." -ForegroundColor DarkGray
 $ans = Read-Host "  Pin GPU interrupt affinity to core 2? (Y/N) [default: Y]"
 if ($ans -ieq 'N') {
     $setInterruptAffinity = $false
@@ -266,7 +265,6 @@ if ($ans -ieq 'N') {
     Write-Log "Option selected: Interrupt affinity = NO" 'INFO'
 } else {
     Write-Host "  -> GPU interrupt chain will be pinned to core 2." -ForegroundColor Yellow
-    Write-Host "     Re-run set_affinity.bat after each NVIDIA driver update." -ForegroundColor DarkGray
     Write-Log "Option selected: Interrupt affinity = YES" 'INFO'
 }
 
