@@ -47,30 +47,46 @@ function Set-DesktopWallpaper {
         [string]$Path
     )
 
-    if (-not ('WinDeslopper.NativeMethods' -as [type])) {
+    if (-not ('WinDeslopper.WallpaperNativeMethods' -as [type])) {
         Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 
 namespace WinDeslopper {
-    public static class NativeMethods {
+    public static class WallpaperNativeMethods {
         [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern bool SystemParametersInfo(int uiAction, int uiParam, string pvParam, int fWinIni);
+        public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, string pvParam, uint fWinIni);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool SetSysColors(int cElements, int[] lpaElements, int[] lpaRgbValues);
     }
 }
 '@
     }
 
-    $SPI_SETDESKWALLPAPER = 0x0014
-    $SPIF_UPDATEINIFILE   = 0x0001
-    $SPIF_SENDCHANGE      = 0x0002
+    $themePath = Join-Path $env:APPDATA 'Microsoft\Windows\Themes'
+    $cachedFilesPath = Join-Path $themePath 'CachedFiles'
+    $transcodedWallpaper = Join-Path $themePath 'TranscodedWallpaper'
 
-    [WinDeslopper.NativeMethods]::SystemParametersInfo(
+    Remove-Item -LiteralPath $transcodedWallpaper -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $cachedFilesPath -Recurse -Force -ErrorAction SilentlyContinue
+
+    [uint32]$SPI_SETDESKWALLPAPER = 0x0014
+    [uint32]$SPIF_UPDATEINIFILE   = 0x0001
+    [uint32]$SPIF_SENDCHANGE      = 0x0002
+
+    [WinDeslopper.WallpaperNativeMethods]::SystemParametersInfo(
         $SPI_SETDESKWALLPAPER,
         0,
         $Path,
         $SPIF_UPDATEINIFILE -bor $SPIF_SENDCHANGE
     ) | Out-Null
+
+    if ([string]::IsNullOrEmpty($Path)) {
+        [int[]]$desktopElement = 1   # COLOR_DESKTOP
+        [int[]]$blackColor     = 0   # RGB(0,0,0)
+        [WinDeslopper.WallpaperNativeMethods]::SetSysColors(1, $desktopElement, $blackColor) | Out-Null
+    }
 
     Write-Host "    [SET] Desktop background forced to solid black"
 }
