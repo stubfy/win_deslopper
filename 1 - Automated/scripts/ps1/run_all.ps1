@@ -364,7 +364,7 @@ Write-Step "PHASE B.12 - Additional network tweaks (Teredo)"
 Invoke-Script "$SCRIPTS\network_tweaks.ps1"
 
 Write-Step "PHASE B.13 - Windows Update profile: $profilLabel"
-& "$SCRIPTS\set_windows_update.ps1" -Profil $updateProfil
+Invoke-Script "$SCRIPTS\set_windows_update.ps1" @{Profil = $updateProfil}
 
 if ($disableFirewall) {
     Write-Step "PHASE B.14 - Disable Windows Firewall profiles"

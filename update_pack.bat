@@ -1,7 +1,7 @@
 @echo off
 setlocal
 pushd "%TEMP%" >nul 2>&1
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0update_pack.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp01 - Automated\scripts\ps1\update_pack.ps1" -RootPath "%~dp0."
 set "exit_code=%errorlevel%"
 popd >nul 2>&1
 

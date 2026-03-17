@@ -7,16 +7,17 @@
     replace the current pack in place without requiring git on the user side.
 .NOTES
     No administrator rights required.
-    Run from the pack root or by double-clicking update_pack.bat.
+    Run from the pack root by double-clicking update_pack.bat.
 #>
 
 param(
     [switch]$CheckOnly,
-    [int]$TimeoutSec = 20
+    [int]$TimeoutSec = 20,
+    [string]$RootPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
-$ROOT = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ROOT = if (-not [string]::IsNullOrWhiteSpace($RootPath)) { (Get-Item $RootPath).FullName } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $REPO = 'stubfy/win_deslopper'
 $VERSION_FILE = Join-Path $ROOT 'pack-version.txt'
 $LEGACY_VERSION_FILE = Join-Path $ROOT '1 - Automated\scripts\ps1\run_all.ps1'
