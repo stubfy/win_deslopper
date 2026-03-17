@@ -25,6 +25,8 @@
 #   NVIDIA drivers reset interrupt affinity on each driver update.
 #   Re-run set_affinity.bat after every NVIDIA driver update.
 
+param([switch]$SkipReboot)
+
 $ErrorActionPreference = 'Continue'
 
 $TARGET_CORE = 2
@@ -130,7 +132,9 @@ if ($ok -eq $chain.Count) {
 Write-Host "    Reboot required for the setting to take effect." -ForegroundColor Yellow
 Write-Host "    NVIDIA: re-run set_affinity.bat after each driver update." -ForegroundColor DarkGray
 Write-Host ""
-$r = Read-Host "  Reboot now? (Y/N) [default: Y]"
-if ($r -eq '' -or $r -ieq 'Y') {
-    Restart-Computer -Force
+if (-not $SkipReboot) {
+    $r = Read-Host "  Reboot now? (Y/N) [default: Y]"
+    if ($r -eq '' -or $r -ieq 'Y') {
+        Restart-Computer -Force
+    }
 }

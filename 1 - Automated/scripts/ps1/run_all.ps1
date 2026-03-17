@@ -77,13 +77,13 @@ function Write-Step {
 }
 
 function Invoke-Script {
-    param([string]$Path)
+    param([string]$Path, [hashtable]$Params = @{})
     $name = Split-Path $Path -Leaf
     Write-Host "    $name ... " -NoNewline
     Write-Log "Start: $name" 'RUN'
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     try {
-        & $Path *>&1 | ForEach-Object {
+        & $Path @Params *>&1 | ForEach-Object {
             $line = $_
             if ($line -is [System.Management.Automation.ErrorRecord]) {
                 Write-Log "  [ERR] $($line.Exception.Message)" 'WARN'
@@ -345,7 +345,7 @@ Invoke-Script "$SCRIPTS\17_mouse_accel.ps1"
 
 if ($setInterruptAffinity) {
     Write-Step "PHASE B.19 - GPU interrupt affinity (pin to core 2)"
-    Invoke-Script (Join-Path $AFFINITY_DIR "set_affinity.ps1")
+    Invoke-Script (Join-Path $AFFINITY_DIR "set_affinity.ps1") @{SkipReboot = $true}
 } else {
     Write-Step "PHASE B.19 - GPU interrupt affinity (skipped)"
     Write-Host "    Skipped        : run 6 - Interrupt Affinity\set_affinity.bat after NVIDIA updates"
