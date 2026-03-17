@@ -243,7 +243,7 @@ To be done in order after rebooting. The Defender step is back in its own manual
 | 1 | **2 - Windows Defender/run_defender.bat** | Requires Safe Mode; PPL and Tamper Protection block full disable in normal mode | High |
 | 2 | **3 - MSI Utils** | Manual identification of compatible devices required on first run | Moderate |
 | 3 | **4 - NVInspector** | `run_all.bat` can install NVInspector to `%APPDATA%\win_deslopper` and add a Desktop shortcut. Profile tuning remains manual. | Low |
-| 4 | **5 - Device Manager** | USB power saving per device node, not cleanly scriptable | Low |
+| 4 | **5 - Device Manager** | Disable unused devices (HDA Controller, IME, Hyper-V driver, GS Wavetable, etc.) to remove their DPCs and interrupts; which devices are safe to disable depends on your hardware | Low |
 | 5 | **6 - Interrupt Affinity** | Automated by `set_affinity.bat`. Re-run after each NVIDIA driver update (driver resets the setting). | Low |
 | 6 | **NIC Device Manager** | Hardware-dependent NIC settings: disable Interrupt Moderation, EEE, Flow Control, Wake-on-*, LSO V2; max Receive/Transmit Buffers; uncheck power management. Keep Checksum Offload enabled and Speed/Duplex on Auto-Negotiation. | Low |
 | 7 | **Tools** | Complementary tools (Autoruns, temp folders) | Low |
