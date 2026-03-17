@@ -423,7 +423,7 @@ if ($installNvInspector -and (Test-Path $nvInspectorExe) -and (Test-Path $nvInsp
 } else {
     Write-Host "  4. NVIDIA Profile Inspector - skipped (no NVIDIA GPU detected)" -ForegroundColor DarkGray
 }
-Write-Host "  5. Device Manager - disable USB power saving (5 - Gestionnaire/)"
+Write-Host "  5. Device Manager - disable USB power saving (5 - Device Manager/)"
 Write-Host "  6. Interrupt Affinity - re-run set_affinity.bat after each NVIDIA driver update"
 Write-Host "  7. NIC settings - disable offloads, buffers  (7 - Network WIP/)"
 Write-Host "  8. Optional timer check: verify with MeasureSleep.exe as admin (Tools/)"

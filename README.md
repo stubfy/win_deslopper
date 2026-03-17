@@ -338,7 +338,7 @@ win_deslopper/
 │   ├── install_nvinspector.bat
 │   ├── install_nvinspector.ps1
 │   └── nvpi-revamped-*/
-├── 5 - Gestionnaire/
+├── 5 - Device Manager/
 ├── 6 - Interrupt Affinity/
 └── Tools/
     └── MeasureSleep.exe

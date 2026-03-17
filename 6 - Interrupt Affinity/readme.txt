@@ -85,7 +85,7 @@ MANUAL PROCEDURE (fallback - use intPolicy_x64.exe)
 ----------------------------------------------------
 STEP 1 -- Identify the GPU's PCI bridge
 
-1. Open Device Manager (Gestionnaire.lnk shortcut)
+1. Open Device Manager (`Device Manager.lnk` shortcut)
 2. Menu View > Devices by connection
 3. Locate the graphics card in the connection tree
 4. Identify the "PCI to PCI Bridge" immediately above the GPU
