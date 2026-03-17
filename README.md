@@ -16,6 +16,7 @@
 - [What is in the pack](#what-is-in-the-pack)
 - [Fresh install example](#fresh-install-example)
 - [Quick start](#quick-start)
+- [Pack updates](#pack-updates)
 - [Automated phase](#automated-phase)
   - [Windows Update profiles](#windows-update-profiles)
   - [Registry tweaks](#registry-tweaks-applied)
@@ -95,6 +96,38 @@ The manual folders still contain guidance files where needed.
 
 ---
 
+## Pack updates
+
+To update the pack itself, just double-click:
+
+```
+update_pack.bat
+```
+
+No git, GitHub Desktop, or terminal knowledge is required.
+
+The updater:
+- reads your current local pack version
+- checks the latest GitHub tag for `stubfy/win_deslopper`
+- shows the changelog tag by tag before asking for confirmation
+- updates the pack **in place** so the folder path stays the same
+- keeps a backup of the previous pack next to the current folder
+- preserves `1 - Automated/backup/` and `3 - MSI Utils/*.json`
+
+If a tag has no published GitHub Release notes yet, the updater shows:
+
+```text
+No published release notes for this tag.
+```
+
+You can also run the checker without downloading anything:
+
+```powershell
+.\update_pack.ps1 -CheckOnly
+```
+
+---
+
 ## Automated phase
 
 Scripts executed in order:
@@ -103,9 +136,9 @@ Scripts executed in order:
 |--------|---------|
 | `backup.ps1` | Windows restore point + service/registry state export |
 | `registry.ps1` | Consolidated, deduplicated registry tweaks |
-| `services.ps1` | Service startup alignment (reference main PC) |
+| `services.ps1` | Service startup alignment (built-in catalog) |
 | `bcdedit.ps1` | Boot configuration (dynamictick, legacy menu) |
-| `power.ps1` | Ultimate Performance power plan + Bitsum values |
+| `power.ps1` | Ultimate Performance power plan + PPM Rocket (immediate max CPU frequency) |
 | `set_dns.ps1` | Optional Cloudflare DNS (1.1.1.1 / 1.0.0.1) |
 | `debloat.ps1` | UWP app removal (Teams, Microsoft 365, Family, Quick Assist, Sticky Notes...) |
 | `oosu10.ps1` | O&O ShutUp10++ silent mode (240 tweaks) |
@@ -124,6 +157,8 @@ Scripts executed in order:
 On systems with an NVIDIA GPU, the script can also copy NVInspector to `%APPDATA%\win_deslopper\NVInspector` and create a Desktop shortcut to `NVPI-R.exe`.
 
 At the end of the script, if you want to disable Defender, you can directly enter Safe Mode by choosing the S option.
+
+`show_diff.ps1` can also be run standalone at any time after `run_all.bat`. Re-run it after a Windows Update to detect regressions: entries marked `failed` indicate tweaks that were reset by the update.
 
 ### Windows Update profiles
 
@@ -227,7 +262,7 @@ To undo: `restore_affinity.bat` in the same folder.
 
 ### Service startup tweaks
 
-`services.ps1` matches the startup types from the reference main PC.
+`services.ps1` aligns service startup types to a built-in catalog optimized for gaming.
 Noisy stuff like `SysMain`, `DPS`, `DiagTrack`, `WSearch` gets disabled. Most secondary services stay `Manual`, including `IKEEXT`, `StiSvc` and `TermService`. A small core stays `Automatic` on purpose (`DeviceAssociationService`, `InstallService`, `VaultSvc`, `W32Time`, `wuauserv`). `UsoSvc` is `AutomaticDelayedStart`.
 `DoSvc` is `Disabled`, and its `TriggerInfo` key is removed so SCM cannot quietly bring it back.
 
@@ -305,20 +340,40 @@ If a device changed PCI slot since the snapshot, its InstanceId will differ and 
 Restores in order:
 
 - Registry (from backup created by `backup.ps1`)
-- Services (back to default values)
+- Services (back to saved state from `backup/services_state.json`)
 - Boot configuration (bcdedit)
 - DNS (back to DHCP)
 - SetTimerResolution (startup shortcut removed)
 - Power plan (back to Balanced)
 - USB selective suspend (restored)
-- AI/Recall keys (deleted)
+- AI/Recall/Copilot policy keys (removed)
+- UWP app reinstallation help (`debloat_restore.ps1` provides Store/winget commands)
+- Network tweaks (Teredo, TCP stack, LSO, Nagle, QoS restored to Windows defaults)
 - Windows Update (restored to Maximum / Windows default)
 - Windows Firewall profiles (restored to saved state or Windows default)
+- UWT equivalent tweaks (visual effects, privacy keys restored to Windows defaults)
 - Personal shell/theme settings (restored to Windows defaults)
+- Mouse acceleration curves (MarkC fix reverted to Windows default)
 - GPU interrupt affinity (Affinity Policy keys removed or restored to pre-tweak state)
 - Optional reinstall prompt for Microsoft Edge + WebView2 Runtime / OneDrive
 
-> **Limitation**: Removed UWP apps are not restored automatically. The `debloat_restore.ps1` script provides Store reinstall commands.
+## Project structure
+
+```
+win_deslopper/
+├── 1 - Automated/          Core automation (run_all.bat, restore_all.bat, scripts/)
+├── 2 - Windows Defender/   Manual Defender disable (requires Safe Mode)
+├── 3 - MSI Utils/          MSI interrupt mode configuration
+├── 4 - NVInspector/        NVIDIA Profile Inspector bundle
+├── 5 - Device Manager/     Shortcut for disabling unused devices
+├── 6 - Interrupt Affinity/ GPU IRQ affinity pinning
+├── 7 - DNS/                Quick Cloudflare DNS reapply
+├── 8 - Windows Update/     Quick Windows Update profile switch
+├── Tools/                  MeasureSleep, Autoruns, UWT, temp shortcuts
+└── backup/                 Generated locally, not tracked by git
+```
+
+---
 
 ## Warnings
 
@@ -332,7 +387,7 @@ Restores in order:
 | **VBS/HVCI disabled** | Credential Guard and memory protections are off. Good perf gain, but you lose some security hardening. |
 | **MSI Utils** | Do not enable MSI on audio controllers, capture cards (ELGATO) or legacy USB - BSOD risk. |
 | **Interrupt Affinity** | The automated script detects the GPU chain and pins to core 2. On AMD, the Root Complex appears as ACPI -- normal, GPU + Bridge is applied and is sufficient. NVIDIA driver updates silently reset this -- re-run `set_affinity.bat` after each update. |
-| **Service startup tweaks** | Startup types come from the reference main PC. Noisiest services are disabled, most stay manual. `BITS` / `UsoSvc` / `wuauserv` can still change depending on the Windows Update profile you pick. |
+| **Service startup tweaks** | Startup types come from a built-in catalog optimized for gaming. Noisiest services are disabled, most stay manual. `BITS` / `UsoSvc` / `wuauserv` can still change depending on the Windows Update profile you pick. |
 | **WU Disabled profile** | No security patches, only use on isolated gaming machines. |
 | **Firewall disabled** | No Windows firewall filtering. Use only if another firewall or isolated setup covers the machine. |
 | **Timer resolution tools** | Use either `SetTimerResolution` or `Process Lasso`, not both. After reboot, check with `Tools/MeasureSleep.exe`. Known conflicts: VoiceMeeter Macro Buttons < v1.1.3.1 (forces 0.50 ms, update it), OpenRGB (holds 0.50 ms while running, close it after setup). |

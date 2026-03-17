@@ -4,9 +4,9 @@
 # Dossier archives — non distribue
 old/
 
-# Outils locaux
-check_updates.ps1
-check_updates.bat
+# Outils locaux (prefixe _ = dev uniquement, non distribue)
+_check_updates.ps1
+_check_updates.bat
 
 # Instructions internes Claude Code
 CLAUDE.md

@@ -150,6 +150,6 @@ try {
 Write-Host ""
 Write-Host "    Summary: $countOn MSI ON, $countOff MSI OFF, $countNoKey no registry key" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "    Commit msi_state.json to git to persist for future reinstalls." -ForegroundColor DarkGray
+Write-Host "    Keep msi_state.json in 3 - MSI Utils/ so future pack updates preserve it." -ForegroundColor DarkGray
 Write-Host "    Run msi_restore.bat after a reformat to replay this state." -ForegroundColor DarkGray
 Write-Host ""

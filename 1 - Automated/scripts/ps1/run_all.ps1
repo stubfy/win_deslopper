@@ -54,11 +54,26 @@ $PACK_ROOT    = Split-Path $ROOT -Parent
 $SCRIPTS      = $PSScriptRoot
 $MSI_UTILS_DIR   = Join-Path $PACK_ROOT "3 - MSI Utils"
 $NVINSPECTOR_DIR = Join-Path $PACK_ROOT "4 - NVInspector"
-$PACK_VERSION = 'v0.9'
 $LOG_DIR      = Join-Path $env:APPDATA 'win_deslopper\logs'
 $LOG_FILE     = Join-Path $LOG_DIR "win_deslopper.log"
 
 if (-not (Test-Path $LOG_DIR)) { New-Item -ItemType Directory -Path $LOG_DIR -Force | Out-Null }
+
+function Get-PackVersion {
+    param([string]$PackRoot)
+
+    $versionFile = Join-Path $PackRoot 'pack-version.txt'
+    if (Test-Path $versionFile) {
+        $raw = Get-Content -Path $versionFile -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not [string]::IsNullOrWhiteSpace($raw)) {
+            return $raw.Trim()
+        }
+    }
+
+    return 'v0.9'
+}
+
+$PACK_VERSION = Get-PackVersion -PackRoot $PACK_ROOT
 
 function Write-Log {
     param([string]$Msg, [string]$Level = 'INFO')
@@ -142,7 +157,7 @@ function Get-PreferredDisplayGpu {
 
 # ── Header ─────────────────────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "  win_deslopper v0.9" -ForegroundColor Cyan
+Write-Host "  win_deslopper $PACK_VERSION" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  by stubfy" -ForegroundColor DarkGray
 Write-Host ""
