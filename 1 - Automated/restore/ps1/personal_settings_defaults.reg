@@ -47,6 +47,11 @@ Windows Registry Editor Version 5.00
 "StartColorMenu"=-
 "AccentColorMenu"=-
 
+[HKEY_CURRENT_USER\Control Panel\Desktop]
+"WallPaper"="C:\\Windows\\Web\\Wallpaper\\Windows\\img0.jpg"
+"WallpaperStyle"="10"
+"TileWallpaper"="0"
+
 [HKEY_CURRENT_USER\SOFTWARE\Microsoft\TabletTip\1.7]
 "EnableAutocorrection"=dword:00000001
 "EnableSpellchecking"=dword:00000001

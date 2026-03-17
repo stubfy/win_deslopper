@@ -72,6 +72,15 @@ Windows Registry Editor Version 5.00
 "StartColorMenu"=dword:ff000000
 "AccentColorMenu"=dword:ff000000
 
+; Background=0 0 0 + empty WallPaper: Force a solid black desktop background.
+[HKEY_CURRENT_USER\Control Panel\Colors]
+"Background"="0 0 0"
+
+[HKEY_CURRENT_USER\Control Panel\Desktop]
+"WallPaper"=""
+"WallpaperStyle"="0"
+"TileWallpaper"="0"
+
 ; EnableAutocorrection=0: Disable automatic correction of misspelled words.
 ; EnableSpellchecking=0: Disable highlighting of misspelled words.
 [HKEY_CURRENT_USER\SOFTWARE\Microsoft\TabletTip\1.7]

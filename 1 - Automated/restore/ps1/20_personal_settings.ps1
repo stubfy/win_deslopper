@@ -14,6 +14,68 @@ if ($result.ExitCode -eq 0) {
     Write-Host "    [WARN] regedit exit code: $($result.ExitCode)"
 }
 
+function Restore-QuietHoursPolicyDefault {
+    $policyPath = 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\QuietHours'
+    if (Test-Path $policyPath) {
+        Remove-ItemProperty -Path $policyPath -Name 'Enable' -ErrorAction SilentlyContinue
+        $remainingValues = (Get-Item -Path $policyPath -ErrorAction SilentlyContinue).Property
+        if (-not $remainingValues -or $remainingValues.Count -eq 0) {
+            Remove-Item -Path $policyPath -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    Write-Host "    [SET] Automatic Do Not Disturb policy restored to Windows default"
+}
+
+function Refresh-UserPolicy {
+    $result = Start-Process -FilePath "$env:SystemRoot\System32\gpupdate.exe" `
+        -ArgumentList '/target:user /force' `
+        -WindowStyle Hidden `
+        -Wait `
+        -PassThru
+
+    if ($result.ExitCode -eq 0) {
+        Write-Host "    [SET] User policy refreshed"
+    } else {
+        Write-Host "    [WARN] gpupdate exit code: $($result.ExitCode)"
+    }
+}
+
+function Set-DesktopWallpaper {
+    param(
+        [Parameter(Mandatory)]
+        [AllowEmptyString()]
+        [string]$Path
+    )
+
+    if (-not ('WinDeslopper.NativeMethods' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+namespace WinDeslopper {
+    public static class NativeMethods {
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern bool SystemParametersInfo(int uiAction, int uiParam, string pvParam, int fWinIni);
+    }
+}
+'@
+    }
+
+    $SPI_SETDESKWALLPAPER = 0x0014
+    $SPIF_UPDATEINIFILE   = 0x0001
+    $SPIF_SENDCHANGE      = 0x0002
+
+    [WinDeslopper.NativeMethods]::SystemParametersInfo(
+        $SPI_SETDESKWALLPAPER,
+        0,
+        $Path,
+        $SPIF_UPDATEINIFILE -bor $SPIF_SENDCHANGE
+    ) | Out-Null
+
+    Write-Host "    [SET] Desktop wallpaper restored"
+}
+
 function Refresh-UserShell {
     Start-Process -FilePath "$env:SystemRoot\System32\rundll32.exe" `
         -ArgumentList 'user32.dll,UpdatePerUserSystemParameters' `
@@ -22,5 +84,13 @@ function Refresh-UserShell {
     Write-Host "    [SET] User shell parameters refreshed"
 }
 
+Restore-QuietHoursPolicyDefault
+Refresh-UserPolicy
+$defaultWallpaper = if (Test-Path "$env:SystemRoot\Web\Wallpaper\Windows\img0.jpg") {
+    "$env:SystemRoot\Web\Wallpaper\Windows\img0.jpg"
+} else {
+    "$env:SystemRoot\Web\Wallpaper\Windows\img19.jpg"
+}
+Set-DesktopWallpaper -Path $defaultWallpaper
 Refresh-UserShell
 Write-Host "    [NOTE] Some taskbar/theme changes may fully apply after Explorer restart or reboot" -ForegroundColor DarkGray
