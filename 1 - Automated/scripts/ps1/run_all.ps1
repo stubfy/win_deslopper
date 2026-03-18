@@ -31,8 +31,8 @@
     Format: [HH:mm:ss] [LEVEL] message
     Levels: INFO, STEP, RUN, OUT, OK, WARN, ERROR
 
-    The launch configuration is edited from a single keyboard-driven menu at the
-    start of the run and saved to 1 - Automated\backup\run_all_options.json.
+    The launch configuration is summarized at the start of the run and saved to
+    1 - Automated\backup\run_all_options.json after launch confirmation.
     Defender Safe Mode remains a final confirmation so the script never reboots
     without warning.
 
@@ -342,78 +342,27 @@ function Save-RunAllOptions {
         Write-Log ("Failed to save launch options to {0}: {1}" -f $Path, $_.Exception.Message) 'WARN'
     }
 }
-function Get-LaunchMenuItems {
-    param(
-        [bool]$HasNvidiaGpu,
-        [bool]$HasMsiSnapshot
-    )
+function Get-OptionSummaryBoolText {
+    param([bool]$Value)
 
-    $items = @(
-        [PSCustomObject]@{ Type = 'option'; Id = 'defenderStep'; Label = 'Run Defender Safe Mode step at the end' }
-        [PSCustomObject]@{ Type = 'option'; Id = 'updateProfile'; Label = 'Windows Update profile' }
-        [PSCustomObject]@{ Type = 'option'; Id = 'uninstallEdge'; Label = 'Uninstall Microsoft Edge + WebView2' }
-        [PSCustomObject]@{ Type = 'option'; Id = 'uninstallOneDrive'; Label = 'Uninstall OneDrive' }
-        [PSCustomObject]@{ Type = 'option'; Id = 'disableFirewall'; Label = 'Disable Windows Firewall profiles' }
-        [PSCustomObject]@{ Type = 'option'; Id = 'configureDns'; Label = 'Apply Cloudflare DNS' }
-        [PSCustomObject]@{ Type = 'option'; Id = 'enableTimerTool'; Label = 'Enable SetTimerResolution at startup' }
-        [PSCustomObject]@{ Type = 'option'; Id = 'applyPersonalSettings'; Label = 'Apply personal shell settings' }
-    )
-
-    if ($HasNvidiaGpu) {
-        $items += [PSCustomObject]@{ Type = 'option'; Id = 'installNvInspector'; Label = 'Install NVIDIA Profile Inspector' }
+    if ($Value) {
+        return 'Yes'
     }
 
-    $items += [PSCustomObject]@{ Type = 'option'; Id = 'setInterruptAffinity'; Label = 'Pin GPU interrupt affinity to core 2' }
-
-    if ($HasMsiSnapshot) {
-        $items += [PSCustomObject]@{ Type = 'option'; Id = 'applySavedMsi'; Label = 'Apply saved MSI snapshot' }
-    }
-
-    $items += [PSCustomObject]@{ Type = 'action'; Id = 'run'; Label = 'Launch now' }
-    $items += [PSCustomObject]@{ Type = 'action'; Id = 'quit'; Label = 'Quit' }
-
-    return $items
+    return 'No'
 }
 
-function Get-LaunchMenuValueText {
+function Write-LaunchOptionsSummaryLine {
     param(
-        [string]$Id,
-        [hashtable]$Options
+        [string]$Label,
+        [string]$Value,
+        [string]$Color = 'Gray'
     )
 
-    switch ($Id) {
-        'updateProfile' { return "[{0}]" -f (Get-UpdateProfileLabel -Profile $Options['updateProfile']) }
-        'run' { return '[Enter]' }
-        'quit' { return '[Esc]' }
-        default { return if ([bool]$Options[$Id]) { '[x]' } else { '[ ]' } }
-    }
+    Write-Host ("  {0,-30}: {1}" -f $Label, $Value) -ForegroundColor $Color
 }
 
-function Invoke-LaunchMenuSelection {
-    param(
-        [hashtable]$Options,
-        [pscustomobject]$Item
-    )
-
-    if ($Item.Type -ne 'option') {
-        return
-    }
-
-    switch ($Item.Id) {
-        'updateProfile' {
-            $Options['updateProfile'] = switch ($Options['updateProfile']) {
-                '1' { '2' }
-                '2' { '3' }
-                default { '1' }
-            }
-        }
-        default {
-            $Options[$Item.Id] = -not [bool]$Options[$Item.Id]
-        }
-    }
-}
-
-function Show-LaunchOptionsMenu {
+function Show-LaunchOptionsSummary {
     param(
         [hashtable]$Options,
         [bool]$HasNvidiaGpu,
@@ -422,83 +371,51 @@ function Show-LaunchOptionsMenu {
         [string]$MsiStateFile
     )
 
-    $items = Get-LaunchMenuItems -HasNvidiaGpu $HasNvidiaGpu -HasMsiSnapshot $HasMsiSnapshot
-    $selectedIndex = 0
-
-    while ($true) {
-        Clear-Host
-        Write-Host ''
-        Write-Host "  win_desloperf $PACK_VERSION" -ForegroundColor Cyan
-        Write-Host ''
-        Write-Host '  CONFIGURATION BEFORE LAUNCH' -ForegroundColor Magenta
-        Write-Host '  Up/Down: select   Space: toggle/change   Enter: confirm   Esc: quit' -ForegroundColor DarkGray
-        Write-Host '  Saved choices become the defaults on future runs.' -ForegroundColor DarkGray
-        Write-Host ''
-        if (Test-Path $OptionsFile) {
-            Write-Host "  Saved defaults : $OptionsFile" -ForegroundColor DarkGray
-        } else {
-            Write-Host '  Saved defaults : none yet (this run will create them after launch)' -ForegroundColor DarkGray
-        }
-        if ($HasMsiSnapshot) {
-            Write-Host "  MSI snapshot   : $MsiStateFile" -ForegroundColor DarkGray
-        }
-        Write-Host ''
-
-        for ($i = 0; $i -lt $items.Count; $i++) {
-            $item = $items[$i]
-            $prefix = if ($i -eq $selectedIndex) { '>' } else { ' ' }
-            $valueText = Get-LaunchMenuValueText -Id $item.Id -Options $Options
-            $line = " {0} {1,-56} {2}" -f $prefix, $item.Label, $valueText
-            if ($item.Type -eq 'action') {
-                $color = if ($i -eq $selectedIndex) { 'Yellow' } else { 'White' }
-                Write-Host $line -ForegroundColor $color
-            } else {
-                $color = if ($i -eq $selectedIndex) { 'White' } else { 'Gray' }
-                Write-Host $line -ForegroundColor $color
-            }
-        }
-
-        Write-Host ''
-        Write-Host '  Defender stays enabled by default, but the final reboot is always confirmed.' -ForegroundColor DarkGray
-        Write-Host ''
-
-        $keyInfo = $host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
-        switch ($keyInfo.VirtualKeyCode) {
-            38 {
-                if ($selectedIndex -le 0) { $selectedIndex = $items.Count - 1 } else { $selectedIndex-- }
-                continue
-            }
-            40 {
-                if ($selectedIndex -ge ($items.Count - 1)) { $selectedIndex = 0 } else { $selectedIndex++ }
-                continue
-            }
-            32 {
-                $selectedItem = $items[$selectedIndex]
-                if ($selectedItem.Type -eq 'action') {
-                    if ($selectedItem.Id -eq 'run') { return $Options }
-                    return $null
-                }
-                Invoke-LaunchMenuSelection -Options $Options -Item $selectedItem
-                continue
-            }
-            13 {
-                $selectedItem = $items[$selectedIndex]
-                if ($selectedItem.Type -eq 'action') {
-                    if ($selectedItem.Id -eq 'run') { return $Options }
-                    return $null
-                }
-                Invoke-LaunchMenuSelection -Options $Options -Item $selectedItem
-                continue
-            }
-            27 {
-                return $null
-            }
-            default {
-                continue
-            }
-        }
+    Clear-Host
+    Write-Host ''
+    Write-Host "  win_desloperf $PACK_VERSION" -ForegroundColor Cyan
+    Write-Host ''
+    Write-Host '  CONFIGURATION BEFORE LAUNCH' -ForegroundColor Magenta
+    if (Test-Path $OptionsFile) {
+        Write-Host "  Source: saved choices from $OptionsFile" -ForegroundColor DarkGray
+    } else {
+        Write-Host '  Source: built-in defaults (no saved choices yet)' -ForegroundColor DarkGray
     }
+    if ($HasMsiSnapshot) {
+        Write-Host "  MSI snapshot: $MsiStateFile" -ForegroundColor DarkGray
+    }
+    Write-Host ''
+
+    Write-LaunchOptionsSummaryLine -Label 'Defender Safe Mode step' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['defenderStep']))
+    Write-LaunchOptionsSummaryLine -Label 'Windows Update profile' -Value (Get-UpdateProfileLabel -Profile $Options['updateProfile'])
+    Write-LaunchOptionsSummaryLine -Label 'Uninstall Edge + WebView2' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['uninstallEdge']))
+    Write-LaunchOptionsSummaryLine -Label 'Uninstall OneDrive' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['uninstallOneDrive']))
+    Write-LaunchOptionsSummaryLine -Label 'Disable Firewall' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['disableFirewall']))
+    Write-LaunchOptionsSummaryLine -Label 'Apply Cloudflare DNS' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['configureDns']))
+    Write-LaunchOptionsSummaryLine -Label 'Enable SetTimerResolution' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['enableTimerTool']))
+    Write-LaunchOptionsSummaryLine -Label 'Apply personal settings' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['applyPersonalSettings']))
+
+    if ($HasNvidiaGpu) {
+        Write-LaunchOptionsSummaryLine -Label 'Install NVInspector' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['installNvInspector']))
+    } else {
+        Write-LaunchOptionsSummaryLine -Label 'Install NVInspector' -Value 'Skipped (no NVIDIA GPU detected)' -Color 'DarkGray'
+    }
+
+    Write-LaunchOptionsSummaryLine -Label 'Set interrupt affinity' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['setInterruptAffinity']))
+
+    if ($HasMsiSnapshot) {
+        Write-LaunchOptionsSummaryLine -Label 'Apply saved MSI snapshot' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['applySavedMsi']))
+    } else {
+        Write-LaunchOptionsSummaryLine -Label 'Apply saved MSI snapshot' -Value 'Unavailable (no saved snapshot found)' -Color 'DarkGray'
+    }
+
+    Write-Host ''
+    Write-Host '  Answer N if you want to review each option one by one before launch.' -ForegroundColor DarkGray
+    Write-Host ''
+
+    return (Read-BooleanChoice -Prompt 'Run like this?' -Default $true)
 }
+
 function Read-BooleanChoice {
     param(
         [string]$Prompt,
@@ -548,10 +465,13 @@ function Show-LaunchOptionsFallback {
     Write-Host ''
     Write-Host "  win_desloperf $PACK_VERSION" -ForegroundColor Cyan
     Write-Host ''
-    Write-Host '  CONFIGURATION BEFORE LAUNCH' -ForegroundColor Magenta
-    Write-Host '  Raw console key input is not available here, falling back to sequential prompts.' -ForegroundColor Yellow
-    Write-Host ''
-    Write-Host "  Saved defaults: $OptionsFile" -ForegroundColor DarkGray
+    Write-Host '  REVIEW AND EDIT OPTIONS' -ForegroundColor Magenta
+    Write-Host '  Answer each prompt. Press Enter to keep the shown default.' -ForegroundColor DarkGray
+    if (Test-Path $OptionsFile) {
+        Write-Host "  Editing saved choices: $OptionsFile" -ForegroundColor DarkGray
+    } else {
+        Write-Host '  Editing built-in defaults (no saved choices yet)' -ForegroundColor DarkGray
+    }
     Write-Host ''
 
     $Options['defenderStep'] = Read-BooleanChoice -Prompt 'Run Defender Safe Mode step at the end?' -Default ([bool]$Options['defenderStep'])
@@ -640,11 +560,11 @@ $hasMsiSnapshot      = Test-Path $msiStateFile
 $defaultOptions = Get-RunAllDefaultOptions -HasNvidiaGpu $hasNvidiaGpu -HasMsiSnapshot $hasMsiSnapshot
 $launchOptions  = Load-RunAllOptions -Path $RUN_ALL_OPTIONS_FILE -Defaults $defaultOptions -HasNvidiaGpu $hasNvidiaGpu -HasMsiSnapshot $hasMsiSnapshot
 
-try {
-    $launchOptions = Show-LaunchOptionsMenu -Options $launchOptions -HasNvidiaGpu $hasNvidiaGpu -HasMsiSnapshot $hasMsiSnapshot -OptionsFile $RUN_ALL_OPTIONS_FILE -MsiStateFile $msiStateFile
-} catch {
-    Write-Host '  WARN: Interactive arrow menu unavailable, switching to sequential prompts.' -ForegroundColor Yellow
-    Write-Log "Arrow-based launch menu unavailable: $($_.Exception.Message)" 'WARN'
+if (Show-LaunchOptionsSummary -Options $launchOptions -HasNvidiaGpu $hasNvidiaGpu -HasMsiSnapshot $hasMsiSnapshot -OptionsFile $RUN_ALL_OPTIONS_FILE -MsiStateFile $msiStateFile) {
+    Write-Log 'Launch options accepted from the current summary.' 'INFO'
+} else {
+    Write-Host ''
+    Write-Log 'Launch options summary declined; switching to sequential prompts.' 'INFO'
     $launchOptions = Show-LaunchOptionsFallback -Options $launchOptions -HasNvidiaGpu $hasNvidiaGpu -HasMsiSnapshot $hasMsiSnapshot -OptionsFile $RUN_ALL_OPTIONS_FILE
 }
 
@@ -814,7 +734,7 @@ Write-Host 'REMAINING MANUAL STEPS (see README.md at the pack root):' -Foregroun
 
 if ($defenderStep) {
     Write-Host '  1. Confirm the Safe Mode reboot prompt below for the Defender step'
-    Write-Host '  2. In Safe Mode, run 2 - Windows Defender\run_defender.bat again' -ForegroundColor Yellow
+    Write-Host "  2. In Safe Mode, run the Desktop helper: 'Disable Defender and Return to Normal Mode.bat'" -ForegroundColor Yellow
 } else {
     Write-Host '  1. Reboot the PC'
     Write-Host '  2. [Optional / Safe Mode] Disable Windows Defender   (2 - Windows Defender/run_defender.bat)' -ForegroundColor DarkGray
@@ -886,7 +806,7 @@ if ($defenderStep) {
         }
     } else {
         Write-Host ''
-        Write-Host '  Safe Mode reboot skipped. Run 2 - Windows Defender\run_defender.bat later if needed.' -ForegroundColor Yellow
+        Write-Host '  Safe Mode reboot skipped. Run 2 - Windows Defender\run_defender.bat later if needed to recreate the Desktop helper.' -ForegroundColor Yellow
         Write-Log 'Safe Mode reboot skipped by user after automated run.' 'INFO'
     }
 } else {

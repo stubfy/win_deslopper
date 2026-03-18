@@ -71,12 +71,14 @@ The Windows install is fresh, and the "before" screenshot was not taken on the f
 1 - Automated/run_all.bat   (double-click, UAC prompt is automatic)
 ```
 
-Before anything runs, `run_all.bat` opens a single keyboard-driven configuration menu:
-- **Up/Down** to move
-- **Space** or **Enter** on an option to toggle/change it
-- **Defender Safe Mode step** enabled by default
-- choices saved to `1 - Automated/backup/run_all_options.json` and reloaded as defaults next time
-- **Apply saved MSI snapshot** appears in the same menu when `1 - Automated/backup/msi_state.json` exists
+Before anything runs, `run_all.bat` shows a summary of the current launch options:
+- if `1 - Automated/backup/run_all_options.json` exists, the last validated choices are loaded
+- otherwise the built-in defaults are shown
+- **Defender Safe Mode step** stays enabled by default
+- answer **Y** to `Run like this?` to launch immediately with those options
+- answer **N** to review the same options one by one through sequential prompts
+- validated choices are saved back to `1 - Automated/backup/run_all_options.json` for future runs
+- **Apply saved MSI snapshot** appears in the flow when `1 - Automated/backup/msi_state.json` exists
 
 Estimated duration: 5 to 15 minutes. The final reboot is still confirmed at the end:
 - if Defender stayed enabled, the script offers a Safe Mode reboot for the Defender step, default: Yes
@@ -84,7 +86,7 @@ Estimated duration: 5 to 15 minutes. The final reboot is still confirmed at the 
 
 **2. Reboot when prompted at the end**
 
-**3. Follow the manual steps in order (`3 - MSI Utils/`, `4 - NVInspector/`, `5 - Device Manager/`, `6 - Interrupt Affinity/`, then NIC Device Manager tweaks, then `Tools/`). If you confirmed the Defender Safe Mode reboot, run `2 - Windows Defender/run_defender.bat` again once Safe Mode boots. If you skipped that reboot, run it later when needed.**
+**3. Follow the manual steps in order (`3 - MSI Utils/`, `4 - NVInspector/`, `5 - Device Manager/`, `6 - Interrupt Affinity/`, then NIC Device Manager tweaks, then `Tools/`). If you confirmed the Defender Safe Mode reboot, run the Desktop helper `Disable Defender and Return to Normal Mode.bat` once Safe Mode boots. If you skipped that reboot, run `2 - Windows Defender/run_defender.bat` later when needed to recreate the helper.**
 
 Quick reruns are also available when needed:
 `7 - DNS/set_dns.bat`, `8 - Windows Update/set_windows_update.bat`, `1 - Automated/scripts/firewall.bat`.
