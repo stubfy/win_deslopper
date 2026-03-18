@@ -269,6 +269,7 @@ All executions are logged to:
 
 ```
 %APPDATA%\win_desloperf\logs\win_desloperf.log
+%APPDATA%\win_desloperf\logs\win_desloperf_restore.log
 ```
 
 The log includes: pack version, timestamp, OS info, machine name, full output of each script, detailed errors with stack traces.
