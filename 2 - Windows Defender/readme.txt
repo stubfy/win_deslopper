@@ -6,15 +6,15 @@ PROCEDURE
 ---------
 1. From normal Windows, run `run_defender.bat` as administrator
 2. Confirm the prompt
-3. The launcher enables Safe Mode and creates a Desktop helper
-4. In Safe Mode, run `Disable Defender and Return to Normal Mode.bat` from the Desktop
-5. The Desktop helper disables the six Defender services, removes Safe Boot, and reboots back to normal Windows
+3. The launcher enables Safe Mode and creates a Desktop shortcut
+4. In Safe Mode, run `Disable Defender and Return to Normal Mode` from the Desktop
+5. The Desktop shortcut points to the static launcher, which disables the six Defender services, removes Safe Boot, and reboots back to normal Windows
 6. Continue with `3 - MSI Utils/`, `4 - NVInspector/`, `5 - Device Manager/`, `6 - Interrupt Affinity/`, then `Tools/`.
 
 If needed later, the quick rerun entry points are also available:
 `7 - DNS/`, `8 - Windows Update/`, and `1 - Automated/scripts/13_firewall.bat`.
 
-If you left the Defender step enabled in the initial `1 - Automated/run_all.bat` menu and then confirmed the final Safe Mode reboot, just run `Disable Defender and Return to Normal Mode.bat` from the Desktop once Safe Mode boots.
+If you left the Defender step enabled in the initial `1 - Automated/run_all.bat` menu and then confirmed the final Safe Mode reboot, just run `Disable Defender and Return to Normal Mode` from the Desktop once Safe Mode boots.
 
 Note: on some 25H2 configurations, even in Safe Mode, modifications may still be blocked if Smart App Control is active. In that case, disable Smart App Control first via Windows Security > App & browser control.
 

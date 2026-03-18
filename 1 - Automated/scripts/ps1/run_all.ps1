@@ -738,7 +738,7 @@ Write-Host 'REMAINING MANUAL STEPS (see README.md at the pack root):' -Foregroun
 
 if ($defenderStep) {
     Write-Host '  1. Confirm the Safe Mode reboot prompt below for the Defender step'
-    Write-Host "  2. In Safe Mode, run the Desktop helper: 'Disable Defender and Return to Normal Mode.bat'" -ForegroundColor Yellow
+    Write-Host "  2. In Safe Mode, run the Desktop shortcut: 'Disable Defender and Return to Normal Mode'" -ForegroundColor Yellow
 } else {
     Write-Host '  1. Reboot the PC'
     Write-Host '  2. [Optional / Safe Mode] Disable Windows Defender   (2 - Windows Defender/run_defender.bat)' -ForegroundColor DarkGray
@@ -810,7 +810,7 @@ if ($defenderStep) {
         }
     } else {
         Write-Host ''
-        Write-Host '  Safe Mode reboot skipped. Run 2 - Windows Defender\run_defender.bat later if needed to recreate the Desktop helper.' -ForegroundColor Yellow
+        Write-Host '  Safe Mode reboot skipped. Run 2 - Windows Defender\run_defender.bat later if needed to recreate the Desktop shortcut.' -ForegroundColor Yellow
         Write-Log 'Safe Mode reboot skipped by user after automated run.' 'INFO'
     }
 } else {

@@ -6,7 +6,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$helperPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Disable Defender and Return to Normal Mode.bat'
+$PACK_ROOT = Split-Path (Split-Path (Split-Path $PSScriptRoot))
+$shortcutPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Disable Defender and Return to Normal Mode.lnk'
+$legacyHelperPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Disable Defender and Return to Normal Mode.bat'
+$defenderBatch = Join-Path $PACK_ROOT '2 - Windows Defender\run_defender.bat'
 $defenderScript = Join-Path $PSScriptRoot '1 - DisableDefender.ps1'
 
 function Write-DefenderLog {
@@ -23,7 +26,42 @@ function Write-DefenderLog {
     Add-Content -Path $LogFile -Value $line -Encoding UTF8
 }
 
+function New-DefenderDesktopShortcut {
+    param(
+        [string]$ShortcutPath,
+        [string]$TargetPath
+    )
+
+    $shell = $null
+    $shortcut = $null
+
+    try {
+        $shell = New-Object -ComObject WScript.Shell
+        $shortcut = $shell.CreateShortcut($ShortcutPath)
+        $shortcut.TargetPath = $TargetPath
+        $shortcut.WorkingDirectory = Split-Path $TargetPath -Parent
+        $shortcut.Description = 'Disable Windows Defender in Safe Mode and return to normal Windows'
+        $shortcut.IconLocation = "$env:SystemRoot\System32\shell32.dll,71"
+        $shortcut.Save()
+    } finally {
+        if ($null -ne $shortcut) {
+            [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($shortcut)
+        }
+        if ($null -ne $shell) {
+            [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($shell)
+        }
+    }
+}
+
 Write-DefenderLog 'Defender Safe Mode launcher opened.' 'INFO'
+
+if (-not (Test-Path $defenderBatch)) {
+    Write-Host ''
+    Write-Host '  ERROR: Defender batch launcher not found.' -ForegroundColor Red
+    Write-Host "    Expected: $defenderBatch" -ForegroundColor White
+    Write-DefenderLog "Missing Defender batch launcher: $defenderBatch" 'ERROR'
+    throw 'Missing Defender batch launcher.'
+}
 
 if (-not (Test-Path $defenderScript)) {
     Write-Host ''
@@ -39,11 +77,11 @@ if (-not $CalledFromRunAll) {
     Write-Host ''
     Write-Host '  This will:' -ForegroundColor White
     Write-Host '    1. Configure Safe Mode (minimal)' -ForegroundColor White
-    Write-Host "    2. Create a Desktop helper: 'Disable Defender and Return to Normal Mode.bat'" -ForegroundColor White
+    Write-Host "    2. Create a Desktop shortcut: 'Disable Defender and Return to Normal Mode'" -ForegroundColor White
     Write-Host '    3. Reboot into Safe Mode' -ForegroundColor White
     Write-Host ''
-    Write-Host '  In Safe Mode, run the Desktop helper. It disables Defender,' -ForegroundColor DarkGray
-    Write-Host '  removes Safe Boot, and reboots back to normal Windows.' -ForegroundColor DarkGray
+    Write-Host '  In Safe Mode, run the Desktop shortcut. It uses the static launcher' -ForegroundColor DarkGray
+    Write-Host '  from the pack, disables Defender, removes Safe Boot and reboots.' -ForegroundColor DarkGray
     Write-Host ''
 
     $answer = Read-Host 'Continue? (Y/N) [default: Y]'
@@ -62,51 +100,23 @@ if ($LASTEXITCODE -ne 0) {
     throw 'Failed to enable Safe Mode in BCD.'
 }
 
-@"
-@echo off
-fltmc >nul 2>&1
-if %errorlevel% neq 0 (
-    powershell -Command "Start-Process '%~f0' -Verb RunAs"
-    exit /b
-)
-set "DEFENDER_SCRIPT=$defenderScript"
-echo.
-echo  =========================================================
-echo   win_desloperf -- Disable Defender and Return to Normal Mode
-echo  =========================================================
-echo.
-echo  This will:
-echo    1. Disable Windows Defender (6 services set to Start=4)
-echo    2. Remove Safe Boot flag
-echo    3. Reboot to normal Windows
-echo.
-if not exist "%DEFENDER_SCRIPT%" (
-echo  ERROR: missing Defender script:
-echo    %DEFENDER_SCRIPT%
-echo.
-pause
-exit /b 1
-)
-pause
-PowerShell -NoProfile -ExecutionPolicy Bypass -File "%DEFENDER_SCRIPT%"
-if errorlevel 1 (
-echo.
-echo  Defender script failed. Safe Boot was kept enabled.
-echo  Review the PowerShell error, then run this helper again.
-echo.
-pause
-exit /b 1
-)
-bcdedit /deletevalue {current} safeboot >nul 2>&1
-shutdown /r /t 0
-"@ | Set-Content -Path $helperPath -Encoding ASCII
+if (Test-Path $legacyHelperPath) {
+    try {
+        Remove-Item -LiteralPath $legacyHelperPath -Force -ErrorAction Stop
+        Write-DefenderLog "Removed legacy Desktop batch helper: $legacyHelperPath" 'INFO'
+    } catch {
+        Write-DefenderLog ("Unable to remove legacy Desktop batch helper {0}: {1}" -f $legacyHelperPath, $_.Exception.Message) 'WARN'
+    }
+}
 
-Write-DefenderLog "Desktop helper created at $helperPath" 'INFO'
+New-DefenderDesktopShortcut -ShortcutPath $shortcutPath -TargetPath $defenderBatch
+Write-DefenderLog "Desktop shortcut created at $shortcutPath" 'INFO'
 Write-Host ''
 Write-Host '  Safe Mode is now configured.' -ForegroundColor Yellow
 Write-Host ''
 Write-Host '  WHAT TO DO IN SAFE MODE:' -ForegroundColor Cyan
-Write-Host "    Run the shortcut on your Desktop: 'Disable Defender and Return to Normal Mode.bat'" -ForegroundColor White
+Write-Host "    Run the shortcut on your Desktop: 'Disable Defender and Return to Normal Mode'" -ForegroundColor White
+Write-Host '    It points to the static launcher in 2 - Windows Defender\run_defender.bat' -ForegroundColor DarkGray
 Write-Host '    (disables Defender, removes Safe Boot, reboots automatically)' -ForegroundColor DarkGray
 Write-Host ''
 
