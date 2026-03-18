@@ -531,24 +531,29 @@ function Set-ServiceStartupTypeExact {
 
     $serviceKey = "HKLM:\SYSTEM\CurrentControlSet\Services\$Name"
 
+    $scStartValue = $null
     switch ($StartupType) {
         'Disabled' {
+            $scStartValue = 'disabled'
             try { Stop-Service $Name -Force -ErrorAction SilentlyContinue } catch {}
             try { Set-Service $Name -StartupType Disabled -ErrorAction SilentlyContinue } catch {}
             Set-ServiceDwordValue -Path $serviceKey -Name 'Start' -Value 4 | Out-Null
             Set-ServiceDwordValue -Path $serviceKey -Name 'DelayedAutoStart' -Value 0 | Out-Null
         }
         'Manual' {
+            $scStartValue = 'demand'
             try { Set-Service $Name -StartupType Manual -ErrorAction SilentlyContinue } catch {}
             Set-ServiceDwordValue -Path $serviceKey -Name 'Start' -Value 3 | Out-Null
             Set-ServiceDwordValue -Path $serviceKey -Name 'DelayedAutoStart' -Value 0 | Out-Null
         }
         'Automatic' {
+            $scStartValue = 'auto'
             try { Set-Service $Name -StartupType Automatic -ErrorAction SilentlyContinue } catch {}
             Set-ServiceDwordValue -Path $serviceKey -Name 'Start' -Value 2 | Out-Null
             Set-ServiceDwordValue -Path $serviceKey -Name 'DelayedAutoStart' -Value 0 | Out-Null
         }
         'AutomaticDelayedStart' {
+            $scStartValue = 'delayed-auto'
             try { Set-Service $Name -StartupType Automatic -ErrorAction SilentlyContinue } catch {}
             Set-ServiceDwordValue -Path $serviceKey -Name 'Start' -Value 2 | Out-Null
             Set-ServiceDwordValue -Path $serviceKey -Name 'DelayedAutoStart' -Value 1 | Out-Null
@@ -558,7 +563,16 @@ function Set-ServiceStartupTypeExact {
         }
     }
 
+    if ($scStartValue) {
+        try { & sc.exe config $Name start= $scStartValue 2>$null | Out-Null } catch {}
+    }
+
     $current = Get-ExactServiceStartupType -Name $Name
+    if ($Name -eq 'IKEEXT' -and $current -ne $StartupType -and $scStartValue) {
+        try { & sc.exe config $Name start= $scStartValue 2>$null | Out-Null } catch {}
+        Start-Sleep -Milliseconds 250
+        $current = Get-ExactServiceStartupType -Name $Name
+    }
     return [PSCustomObject]@{
         Exists    = $true
         Applied   = ($current -eq $StartupType)

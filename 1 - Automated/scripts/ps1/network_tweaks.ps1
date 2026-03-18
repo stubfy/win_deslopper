@@ -34,7 +34,7 @@
 # Nagle algorithm: batches small outbound TCP packets to reduce overhead. For gaming,
 # this adds up to 200 ms delay on small packets (delayed ACK interaction). Disabling
 # with TcpAckFrequency=1, TCPNoDelay=1, TcpDelAckTicks=0 sends each segment immediately.
-# Applied per-interface via the adapter GUID, on the active Ethernet adapter only.
+# Applied per-interface via the adapter GUID, preferring active wired adapters and falling back to any compatible active client adapter when metadata is incomplete.
 #
 # MaxUserPort: extends ephemeral port range to 65534 (default ~16K).
 # Useful during development (many simultaneous connections) and avoids port exhaustion.
@@ -43,7 +43,14 @@
 
 function Get-NagleTargetAdapters {
     $upAdapters = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' })
-    $strict = @($upAdapters | Where-Object { $_.PhysicalMediaType -eq '802.3' })
+    $usable = @($upAdapters | Where-Object {
+        $guid = $_.InterfaceGuid
+        if (-not $guid) { return $false }
+        $ifacePath = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\$guid"
+        Test-Path $ifacePath
+    })
+
+    $strict = @($usable | Where-Object { $_.PhysicalMediaType -eq '802.3' })
     if ($strict.Count -gt 0) {
         return [PSCustomObject]@{
             Adapters = $strict
@@ -52,11 +59,11 @@ function Get-NagleTargetAdapters {
         }
     }
 
-    $fallback = @($upAdapters | Where-Object {
+    $fallback = @($usable | Where-Object {
         $label = ("{0} {1}" -f $_.Name, $_.InterfaceDescription)
-        $isLikelyWired = [bool]$_.HardwareInterface -or $label -match 'Ethernet|PRO/1000|Gigabit|Realtek|PCIe|virtio'
-        $isExcluded = $label -match 'Wi-?Fi|Wireless|WLAN|Bluetooth|Loopback|Teredo|Tunnel|VPN|PPP|WAN Miniport'
-        $isLikelyWired -and -not $isExcluded
+        $isExcluded = $label -match 'Loopback|Teredo|Tunnel|VPN|PPP|WAN Miniport|Bluetooth'
+        $isLikelyClientAdapter = [bool]$_.HardwareInterface -or $label -match 'Ethernet|Wi-?Fi|Wireless|WLAN|PRO/1000|Gigabit|Realtek|PCIe|virtio|Intel|Broadcom'
+        $isLikelyClientAdapter -and -not $isExcluded
     })
     if ($fallback.Count -gt 0) {
         return [PSCustomObject]@{
@@ -66,10 +73,18 @@ function Get-NagleTargetAdapters {
         }
     }
 
+    if ($usable.Count -gt 0) {
+        return [PSCustomObject]@{
+            Adapters = $usable
+            Mode     = 'path-fallback'
+            Note     = 'no adapter matched wired heuristics; using active adapter(s) with a TCP/IP interface path'
+        }
+    }
+
     return [PSCustomObject]@{
         Adapters = @()
         Mode     = 'none'
-        Note     = 'no compatible active wired adapter found'
+        Note     = 'no compatible active adapter with a TCP/IP interface path found'
     }
 }
 
@@ -113,10 +128,10 @@ if (-not (Test-Path $nlaPschedPath)) {
 Set-ItemProperty -Path $nlaPschedPath -Name 'Do not use NLA' -Value 1 -Type DWord -Force
 Write-Host "    QoS NLA bypass = 1"
 
-# ── Nagle disable (per active Ethernet interface) ─────────────────────────────
+# ── Nagle disable (preferred active client adapters) ──────────────────────────
 $nagleSelection = Get-NagleTargetAdapters
 $ethernetAdapters = @($nagleSelection.Adapters)
-if ($nagleSelection.Mode -eq 'fallback') {
+if ($nagleSelection.Mode -in @('fallback', 'path-fallback')) {
     Write-Host "    Nagle select  : $($nagleSelection.Note)" -ForegroundColor DarkGray
 }
 foreach ($adapter in $ethernetAdapters) {
@@ -139,5 +154,6 @@ if ($ethernetAdapters.Count -eq 0) {
 $tcpParamsPath = 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters'
 Set-ItemProperty -Path $tcpParamsPath -Name 'MaxUserPort' -Value 65534 -Type DWord -Force
 Write-Host "    MaxUserPort = 65534"
+
 
 

@@ -29,11 +29,9 @@ $volatileRegistryKeys = @(
 )
 $volatileRegistryApplied = [System.Collections.Generic.List[object]]::new()
 $volatileServicesApplied = [System.Collections.Generic.List[object]]::new()
-$volatileServices = if ($serviceCatalog.PSObject.Properties.Name -contains 'DiffVolatile') {
-    @($serviceCatalog.DiffVolatile)
-} else {
-    @()
-}
+$volatileServicesFailed = [System.Collections.Generic.List[object]]::new()
+$volatileServices = @($serviceCatalog.DiffVolatile)
+
 
 function Get-ExactServiceStartupType {
     param([Parameter(Mandatory)][string]$Name)
@@ -165,7 +163,12 @@ foreach ($prop in $snap.Services.PSObject.Properties) {
             }
         }
     } else {
-        $svcFailed.Add([PSCustomObject]@{ Name=$svcName; Current=$current; Desired=$desired })
+        $failureRecord = [PSCustomObject]@{ Name=$svcName; Current=$current; Desired=$desired }
+        if ($isVolatile) {
+            $volatileServicesFailed.Add($failureRecord)
+        } else {
+            $svcFailed.Add($failureRecord)
+        }
     }
 }
 
@@ -413,6 +416,14 @@ if ($volatileServicesApplied.Count -gt 0) {
     Write-Host "  Services - volatile / re-applied ($($volatileServicesApplied.Count), not counted):" -ForegroundColor Yellow
     foreach ($s in $volatileServicesApplied) {
         Write-Host ("    ~ {0,-35}  {1}  ->  {2}" -f $s.Name, $s.Before, $s.After) -ForegroundColor Yellow
+    }
+}
+
+if ($volatileServicesFailed.Count -gt 0) {
+    Write-Host ""
+    Write-Host "  Services - volatile / not retained ($($volatileServicesFailed.Count), not counted):" -ForegroundColor Yellow
+    foreach ($s in $volatileServicesFailed) {
+        Write-Host ("    ~ {0,-35}  current={1}  wanted={2}" -f $s.Name, $s.Current, $s.Desired) -ForegroundColor Yellow
     }
 }
 

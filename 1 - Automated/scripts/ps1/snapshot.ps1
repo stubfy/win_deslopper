@@ -96,7 +96,14 @@ function Get-ExactServiceStartupType {
 
 function Get-NagleTargetAdapters {
     $upAdapters = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' })
-    $strict = @($upAdapters | Where-Object { $_.PhysicalMediaType -eq '802.3' })
+    $usable = @($upAdapters | Where-Object {
+        $guid = $_.InterfaceGuid
+        if (-not $guid) { return $false }
+        $ifacePath = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\$guid"
+        Test-Path $ifacePath
+    })
+
+    $strict = @($usable | Where-Object { $_.PhysicalMediaType -eq '802.3' })
     if ($strict.Count -gt 0) {
         return [PSCustomObject]@{
             Adapters = $strict
@@ -105,11 +112,11 @@ function Get-NagleTargetAdapters {
         }
     }
 
-    $fallback = @($upAdapters | Where-Object {
+    $fallback = @($usable | Where-Object {
         $label = ("{0} {1}" -f $_.Name, $_.InterfaceDescription)
-        $isLikelyWired = [bool]$_.HardwareInterface -or $label -match 'Ethernet|PRO/1000|Gigabit|Realtek|PCIe|virtio'
-        $isExcluded = $label -match 'Wi-?Fi|Wireless|WLAN|Bluetooth|Loopback|Teredo|Tunnel|VPN|PPP|WAN Miniport'
-        $isLikelyWired -and -not $isExcluded
+        $isExcluded = $label -match 'Loopback|Teredo|Tunnel|VPN|PPP|WAN Miniport|Bluetooth'
+        $isLikelyClientAdapter = [bool]$_.HardwareInterface -or $label -match 'Ethernet|Wi-?Fi|Wireless|WLAN|PRO/1000|Gigabit|Realtek|PCIe|virtio|Intel|Broadcom'
+        $isLikelyClientAdapter -and -not $isExcluded
     })
     if ($fallback.Count -gt 0) {
         return [PSCustomObject]@{
@@ -119,10 +126,18 @@ function Get-NagleTargetAdapters {
         }
     }
 
+    if ($usable.Count -gt 0) {
+        return [PSCustomObject]@{
+            Adapters = $usable
+            Mode     = 'path-fallback'
+            Note     = 'no adapter matched wired heuristics; using active adapter(s) with a TCP/IP interface path'
+        }
+    }
+
     return [PSCustomObject]@{
         Adapters = @()
         Mode     = 'none'
-        Note     = 'no compatible active wired adapter found'
+        Note     = 'no compatible active adapter with a TCP/IP interface path found'
     }
 }
 
