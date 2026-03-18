@@ -2,42 +2,17 @@
 # Keeps user-specific UI taste separate from optimization/privacy tweaks.
 
 $REG = Join-Path $PSScriptRoot "personal_settings.reg"
-$QuietHoursCommon = Join-Path $PSScriptRoot 'quiet_hours_common.ps1'
 
 if (-not (Test-Path $REG)) {
     Write-Host "    [ERROR] personal_settings.reg not found: $REG"
     exit 1
 }
 
-if (-not (Test-Path $QuietHoursCommon)) {
-    Write-Host "    [ERROR] quiet_hours_common.ps1 not found: $QuietHoursCommon"
-    exit 1
-}
-
-. $QuietHoursCommon
-
 $result = Start-Process regedit.exe -ArgumentList "/s `"$REG`"" -Wait -PassThru
 if ($result.ExitCode -eq 0) {
     Write-Host "    [OK] personal_settings.reg imported"
 } else {
     Write-Host "    [WARN] regedit exit code: $($result.ExitCode)"
-}
-
-function Disable-AutoDndRules {
-    $result = Disable-DoNotDisturbAutomation
-
-    try {
-        $serviceResult = Restart-DoNotDisturbNotificationServices
-        if ($serviceResult.Found) {
-            Write-Host "    [OK] Do Not Disturb forced off and automatic rules disabled ($($result.AutoRuleCount)/4 rules, WpnUserService restarted)"
-        } else {
-            Write-Host "    [OK] Do Not Disturb forced off and automatic rules disabled ($($result.AutoRuleCount)/4 rules)"
-            Write-Host "    [WARN] WpnUserService not found during refresh -- changes apply after sign-out or reboot"
-        }
-    } catch {
-        Write-Host "    [OK] Do Not Disturb forced off and automatic rules disabled ($($result.AutoRuleCount)/4 rules)"
-        Write-Host "    [WARN] Could not restart WpnUserService: $_ -- changes apply after reboot"
-    }
 }
 
 function Set-ClassicAltTab {
@@ -160,7 +135,6 @@ function Refresh-UserShell {
 }
 
 Set-ClassicAltTab
-Disable-AutoDndRules
 Refresh-UserPolicy
 Warn-WallpaperOverrides
 Set-DesktopWallpaper -Path ''

@@ -1,42 +1,17 @@
 # restore\personal_settings.ps1 - Restore defaults for personal shell/theme preferences
 
 $REG = Join-Path $PSScriptRoot "personal_settings_defaults.reg"
-$QuietHoursCommon = Join-Path (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'scripts\ps1') 'quiet_hours_common.ps1'
 
 if (-not (Test-Path $REG)) {
     Write-Host "    [ERROR] personal_settings_defaults.reg not found: $REG"
     exit 1
 }
 
-if (-not (Test-Path $QuietHoursCommon)) {
-    Write-Host "    [ERROR] quiet_hours_common.ps1 not found: $QuietHoursCommon"
-    exit 1
-}
-
-. $QuietHoursCommon
-
 $result = Start-Process regedit.exe -ArgumentList "/s `"$REG`"" -Wait -PassThru
 if ($result.ExitCode -eq 0) {
     Write-Host "    [OK] personal_settings_defaults.reg imported"
 } else {
     Write-Host "    [WARN] regedit exit code: $($result.ExitCode)"
-}
-
-function Restore-AutoDndRules {
-    $result = Restore-DoNotDisturbAutomationDefaults
-
-    try {
-        $serviceResult = Restart-DoNotDisturbNotificationServices
-        if ($serviceResult.Found) {
-            Write-Host "    [OK] Automatic Do Not Disturb rules restored to Windows defaults ($($result.AutoRuleCount)/4 rules, WpnUserService restarted)"
-        } else {
-            Write-Host "    [OK] Automatic Do Not Disturb rules restored to Windows defaults ($($result.AutoRuleCount)/4 rules)"
-            Write-Host "    [WARN] WpnUserService not found during refresh -- changes apply after sign-out or reboot"
-        }
-    } catch {
-        Write-Host "    [OK] Automatic Do Not Disturb rules restored to Windows defaults ($($result.AutoRuleCount)/4 rules)"
-        Write-Host "    [WARN] Could not restart WpnUserService: $_ -- changes apply after reboot"
-    }
 }
 
 function Restore-AltTabDefault {
@@ -152,7 +127,6 @@ function Refresh-UserShell {
 }
 
 Restore-AltTabDefault
-Restore-AutoDndRules
 Refresh-UserPolicy
 Warn-WallpaperOverrides
 $defaultWallpaper = if (Test-Path "$env:SystemRoot\Web\Wallpaper\Windows\img0.jpg") {
