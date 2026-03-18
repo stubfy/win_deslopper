@@ -5,5 +5,5 @@ if %errorlevel% neq 0 (
     exit /b
 )
 set "MSI_RESTORE_PS1=%~dp0..\1 - Automated\scripts\ps1\msi_restore.ps1"
-powershell -NoProfile -ExecutionPolicy RemoteSigned -Command "Unblock-File -LiteralPath '%MSI_RESTORE_PS1%' -ErrorAction SilentlyContinue; & '%MSI_RESTORE_PS1%' -DataDir '%~dp0' -StateFile '%~dp0..\1 - Automated\backup\msi_state.json'"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%MSI_RESTORE_PS1%" -DataDir "%~dp0" -StateFile "%~dp0..\1 - Automated\backup\msi_state.json"
 pause
