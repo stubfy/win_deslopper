@@ -71,23 +71,20 @@ The Windows install is fresh, and the "before" screenshot was not taken on the f
 1 - Automated/run_all.bat   (double-click, UAC prompt is automatic)
 ```
 
-You will be prompted for a few options before anything runs:
-- **Windows Update profile** (Maximum / Security only / Disabled), default: Security only
-- **Uninstall Edge + WebView2 Runtime** (optional, best-effort), default: Yes
-- **Uninstall OneDrive** (optional), default: Yes
-- **Disable Windows Firewall profiles** (optional), default: Yes
-- **Apply Cloudflare DNS** (optional), default: Yes
-- **Enable SetTimerResolution at startup** (optional), default: Yes. If you already use Process Lasso, you can skip it.
-- **Apply personal shell/theme settings** (optional), default: Yes
-- **Install NVIDIA Profile Inspector to `%APPDATA%\win_desloperf` + Desktop shortcut** (NVIDIA GPU only), default: Yes
-- **Pin GPU interrupt affinity to core 2** (optional), default: Yes. Re-run `6 - Interrupt Affinity/set_affinity.bat` after each NVIDIA driver update.
+Before anything runs, `run_all.bat` opens a single keyboard-driven configuration menu:
+- **Up/Down** to move
+- **Space** or **Enter** on an option to toggle/change it
+- **Defender Safe Mode step** enabled by default
+- choices saved to `1 - Automated/backup/run_all_options.json` and reloaded as defaults next time
+- **Apply saved MSI snapshot** appears in the same menu when `1 - Automated/backup/msi_state.json` exists
 
-Estimated duration: 5 to 15 minutes. A reboot prompt is shown at the end.
-If you pick `[S]`, Safe Mode gets configured and a `Disable Defender and Return to Normal Mode.bat` shortcut lands on the Desktop, same thing as running `2 - Windows Defender/run_defender.bat` yourself.
+Estimated duration: 5 to 15 minutes. The final reboot is still confirmed at the end:
+- if Defender stayed enabled, the script offers a Safe Mode reboot for the Defender step, default: Yes
+- if Defender was disabled in the menu, the script offers a normal reboot, default: No
 
-**2. Reboot**
+**2. Reboot when prompted at the end**
 
-**3. Follow the manual steps in order (`2 - Windows Defender/run_defender.bat` if you did not choose `[S]`, then folders 3, 4, 5, 6, then NIC Device Manager tweaks, then `Tools/`)**
+**3. Follow the manual steps in order (`3 - MSI Utils/`, `4 - NVInspector/`, `5 - Device Manager/`, `6 - Interrupt Affinity/`, then NIC Device Manager tweaks, then `Tools/`). If you skipped the Defender reboot at the end, run `2 - Windows Defender/run_defender.bat` later when needed.**
 
 Quick reruns are also available when needed:
 `7 - DNS/set_dns.bat`, `8 - Windows Update/set_windows_update.bat`, `1 - Automated/scripts/firewall.bat`.
@@ -112,7 +109,7 @@ The updater:
 - shows the changelog tag by tag before asking for confirmation
 - updates the pack **in place** so the folder path stays the same
 - keeps a backup of the previous pack next to the current folder
-- preserves `1 - Automated/backup/` and `3 - MSI Utils/*.json`
+- preserves `1 - Automated/backup/` (including saved `run_all` choices and the canonical MSI snapshot) and MSI auxiliary JSON files in `3 - MSI Utils/`
 
 If a tag has no published GitHub Release notes yet, the updater shows:
 
@@ -150,7 +147,7 @@ Scripts executed in order:
 
 On systems with an NVIDIA GPU, the script can also copy NVInspector to `%APPDATA%\win_desloperf\NVInspector` and create a Desktop shortcut to `NVPI-R.exe`.
 
-At the end of the script, if you want to disable Defender, you can directly enter Safe Mode by choosing the S option.
+At the end of the script, reboot behavior depends on the launch menu: if the Defender step stayed enabled, `run_all.bat` offers an immediate Safe Mode reboot (default: Yes); otherwise it offers a normal reboot (default: No).
 
 `show_diff.ps1` can also be run standalone at any time after `run_all.bat`. Re-run it after a Windows Update to detect regressions: entries marked `failed` indicate tweaks that were reset by the update.
 
@@ -306,23 +303,16 @@ Which devices get MSI enabled is a judgment call, you have to look at the list a
 
 1. `PCIutil.exe` as administrator, close it right away (loads the kernel driver `MSI_util_v3.exe` needs)
 2. `MSI_util_v3.exe` as administrator (important), enable MSI on GPU, NIC, NVMe. See `readme.txt` for what to avoid
-3. `msi_snapshot.bat` saves the current state to `msi_state.json` before rebooting
-4. Reboot, check nothing broke. If you missed something you get a BSOD, which can be fixed by running msi_restore.bat in Safe Mode.
+3. `msi_snapshot.bat` saves the canonical replay snapshot to `1 - Automated/backup/msi_state.json` before rebooting
+4. Reboot, check nothing broke. If you missed something you get a BSOD, which can be fixed by running `msi_restore.bat` in Safe Mode.
 
 **After a reformat:**
 
-The step 1 script detects `msi_state.json` and asks during the automated phase:
-
-```
->>> PHASE B.13 - MSI interrupt mode (from saved snapshot)
-    Snapshot found: ...msi_state.json
-    Created: 2026-03-16 14:30:00 on DESKTOP-ABC
-  Apply saved MSI configuration? (Y/N) [default: Y]
-```
+If `1 - Automated/backup/msi_state.json` exists, `run_all.bat` exposes **Apply saved MSI snapshot** directly in the initial launch menu. There is no separate MSI prompt later in the run anymore.
 
 If a device changed PCI slot since the snapshot, its InstanceId will differ and it gets skipped with a warning, configure it manually and re-run `msi_snapshot.bat` to update.
 
-`msi_restore.bat` does the same thing standalone, and saves the current state to `msi_state_pre_restore.json` before touching anything.
+`msi_restore.bat` does the same thing standalone, and saves the current state to `msi_state_pre_restore.json` in `3 - MSI Utils/` before touching anything.
 
 > Do not enable MSI on audio controllers, capture cards (ELGATO), or legacy USB, BSOD risk. See `readme.txt` for the full list.
 
@@ -415,3 +405,7 @@ Even though the pack has been massively tested, I can't promise it covers absolu
 ## License
 
 MIT
+
+
+
+

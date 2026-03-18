@@ -111,3 +111,4 @@ After configuring MSI mode with the GUI tools, save the state for replay
     you will be prompted to apply it automatically (default: Yes).
 
   msi_state.json is human-readable and can be edited manually if needed.
+

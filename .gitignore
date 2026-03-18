@@ -12,7 +12,7 @@ _check_updates.bat
 CLAUDE.md
 AGENTS.md
 
-# MSI snapshot (machine-specific)
+# MSI runtime state (canonical snapshot lives in 1 - Automated/backup/)
 3 - MSI Utils/msi_state*.json
 
 # Logs locaux
@@ -20,3 +20,4 @@ AGENTS.md
 
 # Fichiers internes Claude Code
 .claude/
+

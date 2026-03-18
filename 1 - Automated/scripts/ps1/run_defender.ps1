@@ -2,6 +2,7 @@
 [CmdletBinding()]
 param(
     [switch]$CalledFromRunAll,
+    [switch]$AutoReboot,
     [string]$LogFile
 )
 
@@ -23,46 +24,43 @@ function Write-DefenderLog {
     Add-Content -Path $LogFile -Value $line -Encoding UTF8
 }
 
-Write-DefenderLog "Defender Safe Mode launcher opened." 'INFO'
+Write-DefenderLog 'Defender Safe Mode launcher opened.' 'INFO'
 
 if (-not (Test-Path $defenderScript)) {
-    Write-Host ""
-    Write-Host "  ERROR: Defender script not found." -ForegroundColor Red
+    Write-Host ''
+    Write-Host '  ERROR: Defender script not found.' -ForegroundColor Red
     Write-Host "    Expected: $defenderScript" -ForegroundColor White
     Write-DefenderLog "Missing Defender script: $defenderScript" 'ERROR'
-    throw "Missing Defender script."
+    throw 'Missing Defender script.'
 }
 
 if (-not $CalledFromRunAll) {
-    Write-Host ""
-    Write-Host "  WINDOWS DEFENDER SAFE MODE STEP" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "  This will:" -ForegroundColor White
-    Write-Host "    1. Configure Safe Mode (minimal)" -ForegroundColor White
+    Write-Host ''
+    Write-Host '  WINDOWS DEFENDER SAFE MODE STEP' -ForegroundColor Cyan
+    Write-Host ''
+    Write-Host '  This will:' -ForegroundColor White
+    Write-Host '    1. Configure Safe Mode (minimal)' -ForegroundColor White
     Write-Host "    2. Create a Desktop helper: 'Disable Defender and Return to Normal Mode.bat'" -ForegroundColor White
-    Write-Host "    3. Reboot into Safe Mode" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  In Safe Mode, run the Desktop helper. It disables Defender," -ForegroundColor DarkGray
-    Write-Host "  removes Safe Boot, and reboots back to normal Windows." -ForegroundColor DarkGray
-    Write-Host ""
+    Write-Host '    3. Reboot into Safe Mode' -ForegroundColor White
+    Write-Host ''
+    Write-Host '  In Safe Mode, run the Desktop helper. It disables Defender,' -ForegroundColor DarkGray
+    Write-Host '  removes Safe Boot, and reboots back to normal Windows.' -ForegroundColor DarkGray
+    Write-Host ''
 
-    $answer = Read-Host "Continue? (Y/N) [default: Y]"
-    if ($answer -eq '') {
-        $answer = 'Y'
-    }
-
+    $answer = Read-Host 'Continue? (Y/N) [default: Y]'
+    if ([string]::IsNullOrWhiteSpace($answer)) { $answer = 'Y' }
     if ($answer -notin @('Y', 'y')) {
-        Write-Host "  Cancelled." -ForegroundColor Yellow
-        Write-DefenderLog "Manual Defender Safe Mode step cancelled by user." 'INFO'
+        Write-Host '  Cancelled.' -ForegroundColor Yellow
+        Write-DefenderLog 'Manual Defender Safe Mode step cancelled by user.' 'INFO'
         return
     }
 }
 
-Write-DefenderLog "Configuring Safe Mode for Defender step." 'INFO'
+Write-DefenderLog 'Configuring Safe Mode for Defender step.' 'INFO'
 bcdedit /set '{current}' safeboot minimal | Out-Null
 if ($LASTEXITCODE -ne 0) {
-    Write-DefenderLog "Failed to enable Safe Mode in BCD." 'ERROR'
-    throw "Failed to enable Safe Mode in BCD."
+    Write-DefenderLog 'Failed to enable Safe Mode in BCD.' 'ERROR'
+    throw 'Failed to enable Safe Mode in BCD.'
 }
 
 @"
@@ -105,14 +103,20 @@ shutdown /r /t 0
 "@ | Set-Content -Path $helperPath -Encoding ASCII
 
 Write-DefenderLog "Desktop helper created at $helperPath" 'INFO'
-Write-Host ""
-Write-Host "  Safe Mode is now configured." -ForegroundColor Yellow
-Write-Host ""
-Write-Host "  WHAT TO DO IN SAFE MODE:" -ForegroundColor Cyan
+Write-Host ''
+Write-Host '  Safe Mode is now configured.' -ForegroundColor Yellow
+Write-Host ''
+Write-Host '  WHAT TO DO IN SAFE MODE:' -ForegroundColor Cyan
 Write-Host "    Run the shortcut on your Desktop: 'Disable Defender and Return to Normal Mode.bat'" -ForegroundColor White
-Write-Host "    (disables Defender, removes Safe Boot, reboots automatically)" -ForegroundColor DarkGray
-Write-Host ""
-Read-Host "  Press Enter to reboot into Safe Mode"
-Write-DefenderLog "Rebooting into Safe Mode for Defender step." 'INFO'
-Restart-Computer -Force
+Write-Host '    (disables Defender, removes Safe Boot, reboots automatically)' -ForegroundColor DarkGray
+Write-Host ''
 
+if ($AutoReboot) {
+    Write-DefenderLog 'Rebooting into Safe Mode for Defender step (auto mode).' 'INFO'
+    Restart-Computer -Force
+    return
+}
+
+Read-Host '  Press Enter to reboot into Safe Mode'
+Write-DefenderLog 'Rebooting into Safe Mode for Defender step.' 'INFO'
+Restart-Computer -Force

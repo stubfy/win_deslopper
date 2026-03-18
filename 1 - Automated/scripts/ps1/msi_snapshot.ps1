@@ -1,121 +1,113 @@
 #Requires -RunAsAdministrator
-# msi_snapshot.ps1 - Capture MSI interrupt state of all PCI devices
-#
-# WHAT IT DOES
-#   Reads the MSISupported and MessageNumberLimit registry values for every
-#   PCI device and writes the result to msi_state.json (golden state for replay).
-#
-# BACKUPS
-#   Before writing the new snapshot:
-#     msi_state_backup.json    <- current live MSI state (always written)
-#     msi_state_previous.json  <- previous msi_state.json if one already existed
-#
-# WHY
-#   After a reformat, MSI mode must be re-enabled manually via the GUI tools.
-#   Capturing the state once lets msi_restore.ps1 replay it automatically.
-#
-# HOW
-#   For each PCI device, reads:
-#     HKLM\SYSTEM\CurrentControlSet\Enum\<InstanceId>\
-#       Device Parameters\Interrupt Management\MessageSignaledInterruptProperties\
-#         MSISupported          (DWORD)
-#         MessageNumberLimit    (DWORD, optional)
+# msi_snapshot.ps1 - Capture MSI interrupt state of all PCI devices.
+# Canonical replay snapshot: 1 - Automated\backup\msi_state.json
+# Local MSI tool folder still holds auxiliary JSONs only.
 
-param([string]$DataDir = '')
+param(
+    [string]$DataDir = '',
+    [string]$StateFile = ''
+)
 
 $ErrorActionPreference = 'Continue'
+$PACK_ROOT = Split-Path (Split-Path (Split-Path $PSScriptRoot))
+if ($DataDir -eq '') { $DataDir = Join-Path $PACK_ROOT '3 - MSI Utils' }
+if ($StateFile -eq '') { $StateFile = Join-Path $PACK_ROOT '1 - Automated\backup\msi_state.json' }
+$LEGACY_STATE_FILE = Join-Path $DataDir 'msi_state.json'
+$BACKUP_FILE = Join-Path $DataDir 'msi_state_backup.json'
+$PREVIOUS_FILE = Join-Path $DataDir 'msi_state_previous.json'
 
-if ($DataDir -eq '') { $DataDir = Split-Path $PSScriptRoot -Parent }
-$STATE_FILE    = Join-Path $DataDir "msi_state.json"
-$BACKUP_FILE   = Join-Path $DataDir "msi_state_backup.json"
-$PREVIOUS_FILE = Join-Path $DataDir "msi_state_previous.json"
+function Write-Info($msg) { Write-Host "    $msg" }
+function Write-Ok($msg) { Write-Host "    [OK] $msg" -ForegroundColor Green }
+function Write-Warn($msg) { Write-Host "    [WARN] $msg" -ForegroundColor Yellow }
+function Write-Err($msg) { Write-Host "    [ERROR] $msg" -ForegroundColor Red }
+function Ensure-Dir([string]$Path) { if (-not (Test-Path $Path)) { New-Item -ItemType Directory -Path $Path -Force | Out-Null } }
 
-function Write-Info($msg)  { Write-Host "    $msg" }
-function Write-Ok($msg)    { Write-Host "    [OK] $msg" -ForegroundColor Green }
-function Write-Warn($msg)  { Write-Host "    [WARN] $msg" -ForegroundColor Yellow }
-function Write-Err($msg)   { Write-Host "    [ERROR] $msg" -ForegroundColor Red }
+function Resolve-StateFile {
+    if (Test-Path $StateFile) { return }
+    if (-not (Test-Path $LEGACY_STATE_FILE)) { return }
+    try {
+        Ensure-Dir (Split-Path $StateFile -Parent)
+        Copy-Item -LiteralPath $LEGACY_STATE_FILE -Destination $StateFile -Force
+        Write-Warn "Legacy snapshot migrated -> $StateFile"
+    } catch {
+        Write-Warn "Could not migrate legacy snapshot: $($_.Exception.Message)"
+    }
+}
 
-Write-Host ""
-Write-Host "================================================" -ForegroundColor Cyan
-Write-Host "   MSI SNAPSHOT                                 " -ForegroundColor Cyan
-Write-Host "================================================" -ForegroundColor Cyan
-Write-Host ""
+Write-Host ''
+Write-Host '================================================' -ForegroundColor Cyan
+Write-Host '   MSI SNAPSHOT                                 ' -ForegroundColor Cyan
+Write-Host '================================================' -ForegroundColor Cyan
+Write-Host ''
 
-# ── A. Backup current live state ───────────────────────────────────────────────
-Write-Info "Reading current live MSI state for backup..."
+Resolve-StateFile
+Ensure-Dir $DataDir
+Ensure-Dir (Split-Path $StateFile -Parent)
+
+Write-Info 'Reading current live MSI state for backup...'
 $liveState = [ordered]@{}
 $liveState['_meta'] = [ordered]@{
     created = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
     machine = $env:COMPUTERNAME
-    os      = (Get-CimInstance Win32_OperatingSystem -ErrorAction SilentlyContinue).Caption
+    os = (Get-CimInstance Win32_OperatingSystem -ErrorAction SilentlyContinue).Caption
 }
 
 $allPciDevices = Get-PnpDevice -InstanceId 'PCI\*' -ErrorAction SilentlyContinue
 foreach ($dev in $allPciDevices) {
-    $msiPath = "HKLM:\SYSTEM\CurrentControlSet\Enum\$($dev.InstanceId)\" +
-               "Device Parameters\Interrupt Management\MessageSignaledInterruptProperties"
+    $msiPath = "HKLM:\SYSTEM\CurrentControlSet\Enum\$($dev.InstanceId)\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties"
     if (Test-Path $msiPath) {
         $props = Get-ItemProperty -Path $msiPath -ErrorAction SilentlyContinue
         $liveState[$dev.InstanceId] = [ordered]@{
-            FriendlyName       = $dev.FriendlyName
-            Class              = $dev.Class
-            MSISupported       = $props.MSISupported
+            FriendlyName = $dev.FriendlyName
+            Class = $dev.Class
+            MSISupported = $props.MSISupported
             MessageNumberLimit = $props.MessageNumberLimit
         }
     }
 }
 
 try {
-    $liveState | ConvertTo-Json -Depth 3 |
-        Set-Content -Path $BACKUP_FILE -Encoding UTF8
-    Write-Ok "Current live state saved -> msi_state_backup.json"
+    $liveState | ConvertTo-Json -Depth 3 | Set-Content -Path $BACKUP_FILE -Encoding UTF8
+    Write-Ok 'Current live state saved -> msi_state_backup.json'
 } catch {
-    Write-Warn "Could not write msi_state_backup.json: $_"
+    Write-Warn "Could not write msi_state_backup.json: $($_.Exception.Message)"
 }
 
-# ── B. Preserve previous golden snapshot if it exists ─────────────────────────
-if (Test-Path $STATE_FILE) {
+if (Test-Path $StateFile) {
     try {
-        Copy-Item -Path $STATE_FILE -Destination $PREVIOUS_FILE -Force
-        Write-Ok "Previous msi_state.json preserved -> msi_state_previous.json"
+        Copy-Item -Path $StateFile -Destination $PREVIOUS_FILE -Force
+        Write-Ok 'Previous canonical snapshot preserved -> msi_state_previous.json'
     } catch {
-        Write-Warn "Could not copy previous msi_state.json: $_"
+        Write-Warn "Could not copy previous snapshot: $($_.Exception.Message)"
     }
 }
 
-Write-Host ""
-
-# ── C. Enumerate all PCI devices and read MSI state ───────────────────────────
-Write-Info "Enumerating PCI devices..."
-Write-Host ""
+Write-Host ''
+Write-Info 'Enumerating PCI devices...'
+Write-Host ''
 
 $snapshot = [ordered]@{}
 $snapshot['_meta'] = [ordered]@{
     created = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
     machine = $env:COMPUTERNAME
-    os      = (Get-CimInstance Win32_OperatingSystem -ErrorAction SilentlyContinue).Caption
+    os = (Get-CimInstance Win32_OperatingSystem -ErrorAction SilentlyContinue).Caption
 }
-
-$countOn    = 0
-$countOff   = 0
+$countOn = 0
+$countOff = 0
 $countNoKey = 0
 
 foreach ($dev in $allPciDevices) {
-    $msiPath = "HKLM:\SYSTEM\CurrentControlSet\Enum\$($dev.InstanceId)\" +
-               "Device Parameters\Interrupt Management\MessageSignaledInterruptProperties"
-
+    $msiPath = "HKLM:\SYSTEM\CurrentControlSet\Enum\$($dev.InstanceId)\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties"
     if (Test-Path $msiPath) {
         $props = Get-ItemProperty -Path $msiPath -ErrorAction SilentlyContinue
-        $msiVal   = $props.MSISupported
+        $msiVal = $props.MSISupported
         $limitVal = $props.MessageNumberLimit
-
         $snapshot[$dev.InstanceId] = [ordered]@{
-            FriendlyName       = $dev.FriendlyName
-            Class              = $dev.Class
-            MSISupported       = $msiVal
+            FriendlyName = $dev.FriendlyName
+            Class = $dev.Class
+            MSISupported = $msiVal
             MessageNumberLimit = $limitVal
         }
-
         if ($msiVal -eq 1) {
             Write-Host ("    [MSI ON]  {0,-40} {1}" -f $dev.FriendlyName, $dev.InstanceId) -ForegroundColor Green
             $countOn++
@@ -125,9 +117,9 @@ foreach ($dev in $allPciDevices) {
         }
     } else {
         $snapshot[$dev.InstanceId] = [ordered]@{
-            FriendlyName       = $dev.FriendlyName
-            Class              = $dev.Class
-            MSISupported       = $null
+            FriendlyName = $dev.FriendlyName
+            Class = $dev.Class
+            MSISupported = $null
             MessageNumberLimit = $null
         }
         Write-Host ("    [No key]  {0,-40} {1}" -f $dev.FriendlyName, $dev.InstanceId) -ForegroundColor DarkGray
@@ -135,21 +127,17 @@ foreach ($dev in $allPciDevices) {
     }
 }
 
-Write-Host ""
-
-# ── D. Write golden snapshot ───────────────────────────────────────────────────
+Write-Host ''
 try {
-    $snapshot | ConvertTo-Json -Depth 3 |
-        Set-Content -Path $STATE_FILE -Encoding UTF8
-    Write-Ok "Snapshot written -> msi_state.json"
+    $snapshot | ConvertTo-Json -Depth 3 | Set-Content -Path $StateFile -Encoding UTF8
+    Write-Ok ("Snapshot written -> {0}" -f $StateFile)
 } catch {
-    Write-Err "Failed to write msi_state.json: $_"
+    Write-Err ("Failed to write snapshot: {0}" -f $_.Exception.Message)
 }
 
-# ── E. Summary ────────────────────────────────────────────────────────────────
-Write-Host ""
+Write-Host ''
 Write-Host "    Summary: $countOn MSI ON, $countOff MSI OFF, $countNoKey no registry key" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "    Keep msi_state.json in 3 - MSI Utils/ so future pack updates preserve it." -ForegroundColor DarkGray
-Write-Host "    Run msi_restore.bat after a reformat to replay this state." -ForegroundColor DarkGray
-Write-Host ""
+Write-Host ''
+Write-Host "    Canonical snapshot: $StateFile" -ForegroundColor DarkGray
+Write-Host '    Run msi_restore.bat after a reformat to replay this state.' -ForegroundColor DarkGray
+Write-Host ''
