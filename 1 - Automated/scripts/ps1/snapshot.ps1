@@ -38,6 +38,27 @@ $REQUIRED_TRACKED_REGISTRY_VALUES = @(
     'HKCU:\System\GameConfigStore|GameDVR_Enabled'
     'HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR|GameDVR_Enabled'
 )
+
+# Registry values set by PowerShell scripts (not .reg files) that should be
+# tracked for regression detection post-Windows-Update. Each entry defines the
+# path, value name, expected desired value, and type (for display in show_diff).
+$ADDITIONAL_TRACKED_REG_VALUES = @(
+    # ai_disable.ps1 - Recall / Click to Do
+    @{ Path='HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI';                               Name='DisableAIDataAnalysis'; Desired=1;   Type='DWORD' }
+    @{ Path='HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI';                               Name='AllowRecallEnablement'; Desired=0;   Type='DWORD' }
+    @{ Path='HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI';                               Name='DisableClickToDo';      Desired=1;   Type='DWORD' }
+    @{ Path='HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\ClickToDo';        Name='DisableClickToDo';      Desired=1;   Type='DWORD' }
+    # ai_disable.ps1 - Paint AI features
+    @{ Path='HKCU:\Software\Microsoft\MSPaint\Settings';  Name='DisableCocreator';        Desired=1; Type='DWORD' }
+    @{ Path='HKCU:\Software\Microsoft\MSPaint\Settings';  Name='DisableGenerativeFill';   Desired=1; Type='DWORD' }
+    @{ Path='HKCU:\Software\Microsoft\MSPaint\Settings';  Name='DisableImageCreator';     Desired=1; Type='DWORD' }
+    @{ Path='HKCU:\Software\Microsoft\MSPaint\Settings';  Name='DisableGenerativeErase';  Desired=1; Type='DWORD' }
+    @{ Path='HKCU:\Software\Microsoft\MSPaint\Settings';  Name='DisableRemoveBackground'; Desired=1; Type='DWORD' }
+    # ai_disable.ps1 - Notepad AI features
+    @{ Path='HKCU:\Software\Microsoft\Notepad\Settings';  Name='DisableAIFeatures'; Desired=1; Type='DWORD' }
+    # set_windows_update.ps1 Profile 2/3 - anti-forced-reboot
+    @{ Path='HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU'; Name='NoAutoRebootWithLoggedOnUsers'; Desired=1; Type='DWORD' }
+)
 $SNAP_FILE  = Join-Path $BACKUP_DIR "snapshot_latest.json"
 
 if (-not (Test-Path $BACKUP_DIR)) {
@@ -151,6 +172,16 @@ foreach ($regFile in $REG_FILES) {
 foreach ($entryKey in $REQUIRED_TRACKED_REGISTRY_VALUES) {
     if (-not $regEntries.Contains($entryKey)) {
         Write-Host "    WARNING : expected tracked registry value missing: $entryKey" -ForegroundColor Yellow
+    }
+}
+
+# Capture additional values set by PowerShell scripts (not present in .reg files)
+foreach ($entry in $ADDITIONAL_TRACKED_REG_VALUES) {
+    $key = "$($entry.Path)|$($entry.Name)"
+    if (-not $regEntries.Contains($key)) {
+        $before = $null
+        try { $before = [long](Get-ItemProperty -Path $entry.Path -Name $entry.Name -ErrorAction Stop).($entry.Name) } catch {}
+        $regEntries[$key] = @{ Path=$entry.Path; Name=$entry.Name; Type=$entry.Type; Before=$before; Desired=$entry.Desired }
     }
 }
 

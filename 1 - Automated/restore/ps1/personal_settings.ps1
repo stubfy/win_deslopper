@@ -1,11 +1,19 @@
 # restore\personal_settings.ps1 - Restore defaults for personal shell/theme preferences
 
 $REG = Join-Path $PSScriptRoot "personal_settings_defaults.reg"
+$QuietHoursCommon = Join-Path (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'scripts\ps1') 'quiet_hours_common.ps1'
 
 if (-not (Test-Path $REG)) {
     Write-Host "    [ERROR] personal_settings_defaults.reg not found: $REG"
     exit 1
 }
+
+if (-not (Test-Path $QuietHoursCommon)) {
+    Write-Host "    [ERROR] quiet_hours_common.ps1 not found: $QuietHoursCommon"
+    exit 1
+}
+
+. $QuietHoursCommon
 
 $result = Start-Process regedit.exe -ArgumentList "/s `"$REG`"" -Wait -PassThru
 if ($result.ExitCode -eq 0) {
@@ -15,70 +23,19 @@ if ($result.ExitCode -eq 0) {
 }
 
 function Restore-AutoDndRules {
-    # Restore Windows 11 default automatic DND rules (all enabled except scheduled).
-    # Each blob is the factory-default binary from CloudStore.
-    $base = "HKCU:\Software\Microsoft\Windows\CurrentVersion\CloudStore\Store\DefaultAccount\Current\" +
-            "default`$windows.data.donotdisturb.quietmoment`$quietmomentlist"
-
-    # Default enabled blobs captured from a clean Windows 11 25H2 install.
-    # game & postoobe use PriorityOnly profile; presentation & fullscreen use AlarmsOnly.
-    $enabledPriorityOnly = [byte[]](
-        0x43,0x42,0x01,0x00,0x0A,0x02,0x01,0x00,0x2A,0x06,0x00,0x00,0x00,0x00,0x00,
-        0x2A,0x2B,0x0E,0x5E,0x43,0x42,0x01,0x00,0xC2,0x0A,0x01,0xD2,0x1E,0x28,
-        0x4D,0x00,0x69,0x00,0x63,0x00,0x72,0x00,0x6F,0x00,0x73,0x00,0x6F,0x00,
-        0x66,0x00,0x74,0x00,0x2E,0x00,0x51,0x00,0x75,0x00,0x69,0x00,0x65,0x00,
-        0x74,0x00,0x48,0x00,0x6F,0x00,0x75,0x00,0x72,0x00,0x73,0x00,0x50,0x00,
-        0x72,0x00,0x6F,0x00,0x66,0x00,0x69,0x00,0x6C,0x00,0x65,0x00,0x2E,0x00,
-        0x50,0x00,0x72,0x00,0x69,0x00,0x6F,0x00,0x72,0x00,0x69,0x00,0x74,0x00,
-        0x79,0x00,0x4F,0x00,0x6E,0x00,0x6C,0x00,0x79,0x00,0xCA,0x50,0x00,0x00,
-        0x00,0x00,0x00
-    )
-    $enabledAlarmsOnly = [byte[]](
-        0x43,0x42,0x01,0x00,0x0A,0x02,0x01,0x00,0x2A,0x06,0x00,0x00,0x00,0x00,0x00,
-        0x2A,0x2B,0x0E,0x5A,0x43,0x42,0x01,0x00,0xC2,0x0A,0x01,0xD2,0x1E,0x26,
-        0x4D,0x00,0x69,0x00,0x63,0x00,0x72,0x00,0x6F,0x00,0x73,0x00,0x6F,0x00,
-        0x66,0x00,0x74,0x00,0x2E,0x00,0x51,0x00,0x75,0x00,0x69,0x00,0x65,0x00,
-        0x74,0x00,0x48,0x00,0x6F,0x00,0x75,0x00,0x72,0x00,0x73,0x00,0x50,0x00,
-        0x72,0x00,0x6F,0x00,0x66,0x00,0x69,0x00,0x6C,0x00,0x65,0x00,0x2E,0x00,
-        0x41,0x00,0x6C,0x00,0x61,0x00,0x72,0x00,0x6D,0x00,0x73,0x00,0x4F,0x00,
-        0x6E,0x00,0x6C,0x00,0x79,0x00,0xCA,0x50,0x00,0x00,0x00,0x00,0x00
-    )
-    $disabled = [byte[]](0x43,0x42,0x01,0x00,0x0A,0x02,0x01,0x00,0x2A,0x2A,0x00,0x00,0x00)
-
-    $rules = @{
-        'quietmomentgame'         = $enabledPriorityOnly
-        'quietmomentpresentation' = $enabledAlarmsOnly
-        'quietmomentfullscreen'   = $enabledAlarmsOnly
-        'quietmomentpostoobe'     = $enabledPriorityOnly
-        'quietmomentscheduled'    = $disabled  # Disabled by default on clean install
-    }
-
-    $ok = 0
-    foreach ($entry in $rules.GetEnumerator()) {
-        $path = "$base\windows.data.donotdisturb.quietmoment`$$($entry.Key)"
-        try {
-            if (-not (Test-Path $path)) {
-                New-Item -Path $path -Force | Out-Null
-            }
-            Set-ItemProperty -Path $path -Name 'Data' -Value $entry.Value -Type Binary -Force
-            $ok++
-        } catch {
-            Write-Host "    [WARN] Failed to restore $($entry.Key) : $_"
-        }
-    }
+    $result = Restore-DoNotDisturbAutomationDefaults
 
     try {
-        Get-Service WpnUserService_* | Restart-Service -Force -ErrorAction Stop
-        Write-Host "    [OK] Automatic Do Not Disturb rules restored to Windows defaults ($ok/5 rules, WpnUserService restarted)"
+        $serviceResult = Restart-DoNotDisturbNotificationServices
+        if ($serviceResult.Found) {
+            Write-Host "    [OK] Automatic Do Not Disturb rules restored to Windows defaults ($($result.AutoRuleCount)/4 rules, WpnUserService restarted)"
+        } else {
+            Write-Host "    [OK] Automatic Do Not Disturb rules restored to Windows defaults ($($result.AutoRuleCount)/4 rules)"
+            Write-Host "    [WARN] WpnUserService not found during refresh -- changes apply after sign-out or reboot"
+        }
     } catch {
-        Write-Host "    [OK] Automatic Do Not Disturb rules restored to Windows defaults ($ok/5 rules)"
+        Write-Host "    [OK] Automatic Do Not Disturb rules restored to Windows defaults ($($result.AutoRuleCount)/4 rules)"
         Write-Host "    [WARN] Could not restart WpnUserService: $_ -- changes apply after reboot"
-    }
-
-    # Clean up legacy QuietHours policy if present
-    $legacyPath = 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\QuietHours'
-    if (Test-Path $legacyPath) {
-        Remove-Item -Path $legacyPath -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -114,6 +71,15 @@ function Refresh-UserPolicy {
     }
 }
 
+function Warn-WallpaperOverrides {
+    $wallpaperProcesses = Get-Process -Name 'wallpaper64', 'wallpaperservice32' -ErrorAction SilentlyContinue
+    $wallpaperService = Get-Service -Name 'Wallpaper Engine Service' -ErrorAction SilentlyContinue
+
+    if ($wallpaperProcesses -or ($wallpaperService -and $wallpaperService.Status -eq 'Running')) {
+        Write-Host "    [WARN] Wallpaper Engine is running and may immediately override desktop background changes" -ForegroundColor Yellow
+    }
+}
+
 function Set-DesktopWallpaper {
     param(
         [Parameter(Mandatory)]
@@ -141,9 +107,15 @@ namespace WinDeslopper {
     $themePath = Join-Path $env:APPDATA 'Microsoft\Windows\Themes'
     $cachedFilesPath = Join-Path $themePath 'CachedFiles'
     $transcodedWallpaper = Join-Path $themePath 'TranscodedWallpaper'
+    $wallpapersPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers'
+    $desktopPath = 'HKCU:\Control Panel\Desktop'
 
     Remove-Item -LiteralPath $transcodedWallpaper -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $cachedFilesPath -Recurse -Force -ErrorAction SilentlyContinue
+
+    if (-not (Test-Path $wallpapersPath)) {
+        New-Item -Path $wallpapersPath -Force | Out-Null
+    }
 
     [uint32]$SPI_SETDESKWALLPAPER = 0x0014
     [uint32]$SPIF_UPDATEINIFILE   = 0x0001
@@ -155,6 +127,18 @@ namespace WinDeslopper {
         $Path,
         $SPIF_UPDATEINIFILE -bor $SPIF_SENDCHANGE
     ) | Out-Null
+
+    if ([string]::IsNullOrEmpty($Path)) {
+        Set-ItemProperty -Path $wallpapersPath -Name 'BackgroundType' -Value 1 -Type DWord
+        Set-ItemProperty -Path $desktopPath -Name 'WallPaper' -Value ''
+        Set-ItemProperty -Path $desktopPath -Name 'WallpaperStyle' -Value '0'
+        Set-ItemProperty -Path $desktopPath -Name 'TileWallpaper' -Value '0'
+    } else {
+        Set-ItemProperty -Path $wallpapersPath -Name 'BackgroundType' -Value 0 -Type DWord
+        Set-ItemProperty -Path $desktopPath -Name 'WallPaper' -Value $Path
+        Set-ItemProperty -Path $desktopPath -Name 'WallpaperStyle' -Value '10'
+        Set-ItemProperty -Path $desktopPath -Name 'TileWallpaper' -Value '0'
+    }
 
     Write-Host "    [SET] Desktop wallpaper restored"
 }
@@ -170,6 +154,7 @@ function Refresh-UserShell {
 Restore-AltTabDefault
 Restore-AutoDndRules
 Refresh-UserPolicy
+Warn-WallpaperOverrides
 $defaultWallpaper = if (Test-Path "$env:SystemRoot\Web\Wallpaper\Windows\img0.jpg") {
     "$env:SystemRoot\Web\Wallpaper\Windows\img0.jpg"
 } else {

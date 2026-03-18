@@ -207,6 +207,20 @@ switch ($Profil) {
         Set-RegValue $AU_PATH 'AutoInstallMinorUpdates' 1 'DWord'
         Write-Host "    [POLICY] Mode: auto download, notify before install"
 
+        # NoAutoRebootWithLoggedOnUsers=1: Prevents Windows from automatically
+        # rebooting to complete an update installation while a user is logged in.
+        # Without this, Windows can reboot mid-session (e.g., during a gaming session)
+        # as soon as the update download is complete. Critical for gaming stability.
+        Set-RegValue $AU_PATH 'NoAutoRebootWithLoggedOnUsers' 1 'DWord'
+        Write-Host "    [POLICY] Auto-reboot with logged-on users disabled"
+
+        # IsContinuousInnovationOptedIn=0: Disables the "Get the latest updates as
+        # soon as they're available" toggle (Settings > Windows Update > Advanced).
+        # When enabled, this bypass flag makes Windows apply updates immediately,
+        # outside the normal quality update schedule, ignoring AUOptions=3.
+        Set-RegValue $WU_PATH 'IsContinuousInnovationOptedIn' 0 'DWord'
+        Write-Host "    [POLICY] Continuous Innovation opt-in disabled"
+
         Enable-WUServices
         Write-Host "    [OK] Security profile applied"
     }
@@ -228,6 +242,12 @@ switch ($Profil) {
         Set-RegValue $AU_PATH 'NoAutoUpdate' 1 'DWord'
         Set-RegValue $AU_PATH 'AUOptions'    1 'DWord'   # 1 = never check
         Write-Host "    [POLICY] Automatic download disabled"
+
+        # Also apply the anti-reboot and anti-ContinuousInnovation keys for
+        # consistency: if services are somehow re-enabled, forced reboots are
+        # still blocked and the bypass schedule toggle remains disabled.
+        Set-RegValue $AU_PATH 'NoAutoRebootWithLoggedOnUsers' 1 'DWord'
+        Set-RegValue $WU_PATH 'IsContinuousInnovationOptedIn' 0 'DWord'
 
         Disable-WUServices
         Write-Host "    [OK] Windows Update completely disabled"

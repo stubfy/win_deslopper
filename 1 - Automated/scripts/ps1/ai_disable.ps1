@@ -17,9 +17,64 @@ $policies = @{
     # images and extracted text in a local database.
     # DisableAIDataAnalysis=1: Disables the Recall AI analysis pipeline.
     # AllowRecallEnablement=0: Prevents the user from re-enabling Recall in Settings.
+    # DisableClickToDo=1 (policy): Disables Click to Do, the 25H2 AI feature that
+    #   analyses on-screen content to offer contextual AI actions on click.
     'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' = @{
         'DisableAIDataAnalysis' = 1
         'AllowRecallEnablement' = 0
+        'DisableClickToDo'      = 1
+    }
+
+    # ---- Click to Do (user-level override) ----
+    # Additional user-level key for Click to Do disable, complementary to the
+    # policy key above. Covers cases where the policy is not honoured by the
+    # Explorer shell extension before a group policy refresh.
+    'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\ClickToDo' = @{
+        'DisableClickToDo' = 1
+    }
+
+    # ---- Paint AI features ----
+    # Windows 11 25H2 Paint ships with several generative AI features: Cocreator
+    # (image generation), Generative Fill, Image Creator (DALL-E integration),
+    # Generative Erase and Remove Background. All make outbound API calls to
+    # Microsoft/Azure services. Setting these to 1 disables them at the app level.
+    'HKCU:\Software\Microsoft\MSPaint\Settings' = @{
+        'DisableCocreator'        = 1
+        'DisableGenerativeFill'   = 1
+        'DisableImageCreator'     = 1
+        'DisableGenerativeErase'  = 1
+        'DisableRemoveBackground' = 1
+    }
+
+    # ---- Notepad AI features ----
+    # Windows 11 25H2 Notepad can offer AI-powered text suggestions and rewrites
+    # via Microsoft's cloud backend. DisableAIFeatures=1 turns off the entire
+    # AI subsystem in Notepad, preventing outbound calls and the AI sidebar.
+    'HKCU:\Software\Microsoft\Notepad\Settings' = @{
+        'DisableAIFeatures' = 1
+    }
+
+    # ---- Edge AI features ----
+    # Disables the AI/Copilot integration points surfaced inside Microsoft Edge.
+    # These policy keys mirror the Edge group policy schema (ADMX) and are
+    # honoured by Edge regardless of whether the machine is domain-joined.
+    # CopilotCDPPageContext=0: Disables Copilot from reading the current page via CDP.
+    # CopilotPageContext=0: Blocks Copilot from using page content as context.
+    # HubsSidebarEnabled=0: Hides the Edge sidebar (Copilot, Shopping, etc.).
+    # EdgeEntraCopilotPageContext=0: Disables Copilot page context for Entra accounts.
+    # EdgeHistoryAISearchEnabled=0: Prevents AI-powered history search in Edge.
+    # ComposeInlineEnabled=0: Disables the Compose (AI writing assistant) inline mode.
+    # GenAILocalFoundationalModelSettings=1: Blocks local AI model downloads by Edge.
+    # NewTabPageBingChatEnabled=0: Hides the Bing Chat/Copilot entry on the NTP.
+    'HKLM:\SOFTWARE\Policies\Microsoft\Edge' = @{
+        'CopilotCDPPageContext'               = 0
+        'CopilotPageContext'                  = 0
+        'HubsSidebarEnabled'                  = 0
+        'EdgeEntraCopilotPageContext'          = 0
+        'EdgeHistoryAISearchEnabled'           = 0
+        'ComposeInlineEnabled'                = 0
+        'GenAILocalFoundationalModelSettings' = 1
+        'NewTabPageBingChatEnabled'           = 0
     }
 
     # ---- Copilot (current user + machine) ----

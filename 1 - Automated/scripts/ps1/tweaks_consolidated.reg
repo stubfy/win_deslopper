@@ -241,11 +241,20 @@ Windows Registry Editor Version 5.00
 ; system drive. On a 32 GB system this frees 32+ GB of SSD space. Also eliminates
 ; hybrid sleep overhead. 05_power.ps1 calls 'powercfg -h off' which is the
 ; complementary runtime command -- both together ensure full removal.
+; HiberbootEnabled=0: Disables Hybrid Boot (also called Fast Startup). Hybrid Boot
+; writes a partial hibernate image at shutdown so that the next boot resumes from
+; that state instead of doing a full cold boot. This can cause issues with dual-boot
+; setups, driver state corruption after updates, and masks clean cold-boot problems.
+; On a gaming PC with an NVMe drive the boot time difference is negligible; removing
+; Hybrid Boot ensures every boot is a clean hardware init.
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings]
 "ShowSleepOption"=dword:00000000
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power]
 "HibernateEnabled"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Power]
+"HiberbootEnabled"=dword:00000000
 
 ; ---------------------------------------------------------------------------
 ; CLASSIC CONTEXT MENU (Windows 11)
@@ -504,3 +513,33 @@ Windows Registry Editor Version 5.00
 [HKEY_CURRENT_USER\Software\Microsoft\Clipboard]
 "EnableClipboardHistory"=dword:00000000
 "EnableCloudClipboard"=dword:00000000
+
+; ---------------------------------------------------------------------------
+; GAME BAR URL PROTOCOL REDIRECT
+; ---------------------------------------------------------------------------
+; The ms-gamebar and ms-gamebarservices URI schemes are registered by Xbox Game
+; Bar (XboxGamingOverlay package). After the package is removed by debloat.ps1,
+; clicking a game title in the Xbox app or certain launcher links that embed
+; these URIs can trigger a "How do you want to open this?" dialog or a broken
+; WinRT activation attempt that briefly steals focus from the game.
+; Redirecting both protocol handlers to systray.exe (a harmless Windows inbox
+; executable) silently absorbs the activation request with no visible UI.
+; NoOpenWith="" prevents the "open with" prompt from ever appearing.
+; Note: This redirect must survive XboxGamingOverlay reinstallation -- it is
+; placed in HKLM\Classes which takes precedence over the per-user HKCU\Classes
+; registration used by the reinstalled package.
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\ms-gamebar]
+@="URL:ms-gamebar"
+"URL Protocol"=""
+"NoOpenWith"=""
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\ms-gamebar\shell\open\command]
+@="systray.exe"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\ms-gamebarservices]
+@="URL:ms-gamebarservices"
+"URL Protocol"=""
+"NoOpenWith"=""
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\ms-gamebarservices\shell\open\command]
+@="systray.exe"

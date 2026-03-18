@@ -120,6 +120,21 @@ if ($braveInstalled) {
     Set-ItemProperty -Path $braveUpdate -Name 'AutoUpdateCheckPeriodMinutes' -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $braveUpdate -Name 'DisableAutoUpdateChecks'       -Value 1 -Type DWord -ErrorAction SilentlyContinue
 
+    # Disable Brave built-in monetisation / AI / social features.
+    # These are Brave-specific group policy keys honoured without domain-join.
+    # BraveVPNDisabled=1: Disables the Brave VPN button and upsell UI.
+    Set-ItemProperty -Path $bravePolicy -Name 'BraveVPNDisabled'     -Value 1 -Type DWord -ErrorAction SilentlyContinue
+    # BraveWalletDisabled=1: Disables the Brave Crypto Wallet (Ethereum/Solana).
+    Set-ItemProperty -Path $bravePolicy -Name 'BraveWalletDisabled'  -Value 1 -Type DWord -ErrorAction SilentlyContinue
+    # BraveAIChatEnabled=0: Disables the Leo AI chat assistant integrated in Brave.
+    Set-ItemProperty -Path $bravePolicy -Name 'BraveAIChatEnabled'   -Value 0 -Type DWord -ErrorAction SilentlyContinue
+    # BraveRewardsDisabled=1: Disables Brave Rewards (BAT token earn/spend system).
+    Set-ItemProperty -Path $bravePolicy -Name 'BraveRewardsDisabled' -Value 1 -Type DWord -ErrorAction SilentlyContinue
+    # BraveTalkDisabled=1: Disables Brave Talk (Jitsi-based video call feature).
+    Set-ItemProperty -Path $bravePolicy -Name 'BraveTalkDisabled'    -Value 1 -Type DWord -ErrorAction SilentlyContinue
+    # BraveNewsDisabled=1: Disables Brave News (sponsored news feed on NTP).
+    Set-ItemProperty -Path $bravePolicy -Name 'BraveNewsDisabled'    -Value 1 -Type DWord -ErrorAction SilentlyContinue
+
     Write-Host "    [OK] Brave detected - telemetry/background policies applied"
 } else {
     Write-Host "    Brave not detected - Brave policies skipped" -ForegroundColor Gray

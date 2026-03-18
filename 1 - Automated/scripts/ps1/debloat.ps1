@@ -71,6 +71,47 @@ $appsToRemove = @(
     # while removing the package eliminates the WidgetService background process.
     'MicrosoftWindows.Client.WebExperience' # Widgets panel (news feed)
     'Microsoft.WidgetsPlatformRuntime'      # Widgets platform runtime
+
+    # ----- OEM Bloatware (HP / Dell / Lenovo) -----
+    # Pre-installed by OEM imaging; absent on clean installs. Remove-AppxPackage
+    # returns silently if the package is not present, so this list is safe to
+    # apply regardless of the machine manufacturer.
+    'AD2F1837.HPSystemInformation'              # HP System Information
+    'AD2F1837.HPSupportAssistant'               # HP Support Assistant (telemetry)
+    'AD2F1837.HPPrivacySettings'                # HP Privacy Settings
+    'AD2F1837.HPQuickDrop'                      # HP Quick Drop (file share)
+    'AD2F1837.HPDesktopSupportUtilities'        # HP Desktop Support Utilities
+    'AD2F1837.HPPowerManager'                   # HP Power Manager
+    'AD2F1837.HPPCHardwareDiagnosticsWindows'   # HP Hardware Diagnostics
+    'AD2F1837.myaborhelper'                     # HP myHP / OMEN Gaming Hub helper
+    'DellInc.DellSupportAssist'                 # Dell SupportAssist (telemetry)
+    'DellInc.DellCommandUpdate'                 # Dell Command Update
+    'DellInc.DellDigitalDelivery'               # Dell Digital Delivery
+    'DellInc.DellOptimizer'                     # Dell Optimizer (AI tuning)
+    'DellInc.DellPowerManager'                  # Dell Power Manager
+    'E046963F.LenovoCompanion'                  # Lenovo Companion
+    'E046963F.LenovoSettingsforEnterprise'       # Lenovo Settings for Enterprise
+    'E0469640.SmartAppearance'                  # Lenovo Smart Appearance (webcam AI)
+    'LenovoCorporation.LenovoIDforLenovoCompanion' # Lenovo ID
+
+    # ----- Third-party pre-installed bloatware -----
+    # These are pushed by Microsoft via the consumer features pipeline or
+    # pre-installed by OEMs. They are absent on clean installs but common on
+    # retail devices. Removal is silent if not present.
+    'SpotifyAB.SpotifyMusic'                    # Spotify (UWP version)
+    '4DF9E0F8.Netflix'                          # Netflix
+    'BytedancePte.Ltd.TikTok'                   # TikTok
+    'Facebook.Facebook'                         # Facebook
+    'Facebook.InstagramBeta'                    # Instagram
+    'king.com.CandyCrushSaga'                   # Candy Crush Saga
+    'king.com.CandyCrushSodaSaga'               # Candy Crush Soda Saga
+    'king.com.CandyCrushFriends'                # Candy Crush Friends
+    'ROBLOXCORPORATION.ROBLOX'                  # Roblox
+    'AmazonVideo.PrimeVideo'                    # Amazon Prime Video
+    'Disney.37853FC22B2CE'                      # Disney+
+    'PandoraMediaInc.29680B314EFC2'             # Pandora
+    'CAF9E577.Plex'                             # Plex
+    'Duolingo-LearnLanguagesforFree'            # Duolingo
 )
 
 $removedPackages       = 0

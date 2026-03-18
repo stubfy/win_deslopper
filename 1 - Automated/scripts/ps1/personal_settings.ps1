@@ -2,11 +2,19 @@
 # Keeps user-specific UI taste separate from optimization/privacy tweaks.
 
 $REG = Join-Path $PSScriptRoot "personal_settings.reg"
+$QuietHoursCommon = Join-Path $PSScriptRoot 'quiet_hours_common.ps1'
 
 if (-not (Test-Path $REG)) {
     Write-Host "    [ERROR] personal_settings.reg not found: $REG"
     exit 1
 }
+
+if (-not (Test-Path $QuietHoursCommon)) {
+    Write-Host "    [ERROR] quiet_hours_common.ps1 not found: $QuietHoursCommon"
+    exit 1
+}
+
+. $QuietHoursCommon
 
 $result = Start-Process regedit.exe -ArgumentList "/s `"$REG`"" -Wait -PassThru
 if ($result.ExitCode -eq 0) {
@@ -16,51 +24,19 @@ if ($result.ExitCode -eq 0) {
 }
 
 function Disable-AutoDndRules {
-    # Windows 11 stores automatic Do Not Disturb rules (game, fullscreen, display
-    # duplication, post-update, scheduled) as binary blobs in CloudStore.
-    # Blob layout: 43 42 01 00 | 0A 02 [enabled] 00 | 2A 2A 00 00 00
-    #              header       field1  0=off 1=on     field5 (no profile data)
-    # Using 0x00 at the enabled byte explicitly disables the rule in the Settings UI.
-    $disabled = [byte[]](0x43,0x42,0x01,0x00,0x0A,0x02,0x00,0x00,0x2A,0x2A,0x00,0x00,0x00)
+    $result = Disable-DoNotDisturbAutomation
 
-    $base = "HKCU:\Software\Microsoft\Windows\CurrentVersion\CloudStore\Store\DefaultAccount\Current\" +
-            "default`$windows.data.donotdisturb.quietmoment`$quietmomentlist"
-
-    $moments = @(
-        'quietmomentgame'          # When playing a game
-        'quietmomentpresentation'  # When duplicating your display
-        'quietmomentfullscreen'    # When using an app in full-screen mode
-        'quietmomentpostoobe'      # For the first hour after a Windows feature update
-        'quietmomentscheduled'     # During these times
-    )
-
-    $ok = 0
-    foreach ($m in $moments) {
-        $path = "$base\windows.data.donotdisturb.quietmoment`$$m"
-        try {
-            if (-not (Test-Path $path)) {
-                New-Item -Path $path -Force | Out-Null
-            }
-            Set-ItemProperty -Path $path -Name 'Data' -Value $disabled -Type Binary -Force
-            $ok++
-        } catch {
-            Write-Host "    [WARN] Failed to disable $m : $_"
-        }
-    }
-
-    # Restart WpnUserService so the new blobs take effect immediately
     try {
-        Get-Service WpnUserService_* | Restart-Service -Force -ErrorAction Stop
-        Write-Host "    [OK] Automatic Do Not Disturb rules disabled ($ok/5 rules, WpnUserService restarted)"
+        $serviceResult = Restart-DoNotDisturbNotificationServices
+        if ($serviceResult.Found) {
+            Write-Host "    [OK] Do Not Disturb forced off and automatic rules disabled ($($result.AutoRuleCount)/4 rules, WpnUserService restarted)"
+        } else {
+            Write-Host "    [OK] Do Not Disturb forced off and automatic rules disabled ($($result.AutoRuleCount)/4 rules)"
+            Write-Host "    [WARN] WpnUserService not found during refresh -- changes apply after sign-out or reboot"
+        }
     } catch {
-        Write-Host "    [OK] Automatic Do Not Disturb rules disabled ($ok/5 rules)"
+        Write-Host "    [OK] Do Not Disturb forced off and automatic rules disabled ($($result.AutoRuleCount)/4 rules)"
         Write-Host "    [WARN] Could not restart WpnUserService: $_ -- changes apply after reboot"
-    }
-
-    # Clean up legacy QuietHours policy (no longer needed)
-    $legacyPath = 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\QuietHours'
-    if (Test-Path $legacyPath) {
-        Remove-Item -Path $legacyPath -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -98,6 +74,15 @@ function Refresh-UserPolicy {
     }
 }
 
+function Warn-WallpaperOverrides {
+    $wallpaperProcesses = Get-Process -Name 'wallpaper64', 'wallpaperservice32' -ErrorAction SilentlyContinue
+    $wallpaperService = Get-Service -Name 'Wallpaper Engine Service' -ErrorAction SilentlyContinue
+
+    if ($wallpaperProcesses -or ($wallpaperService -and $wallpaperService.Status -eq 'Running')) {
+        Write-Host "    [WARN] Wallpaper Engine is running and may immediately override desktop background changes" -ForegroundColor Yellow
+    }
+}
+
 function Set-DesktopWallpaper {
     param(
         [Parameter(Mandatory)]
@@ -125,9 +110,16 @@ namespace WinDeslopper {
     $themePath = Join-Path $env:APPDATA 'Microsoft\Windows\Themes'
     $cachedFilesPath = Join-Path $themePath 'CachedFiles'
     $transcodedWallpaper = Join-Path $themePath 'TranscodedWallpaper'
+    $wallpapersPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers'
+    $desktopPath = 'HKCU:\Control Panel\Desktop'
+    $colorsPath = 'HKCU:\Control Panel\Colors'
 
     Remove-Item -LiteralPath $transcodedWallpaper -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $cachedFilesPath -Recurse -Force -ErrorAction SilentlyContinue
+
+    if (-not (Test-Path $wallpapersPath)) {
+        New-Item -Path $wallpapersPath -Force | Out-Null
+    }
 
     [uint32]$SPI_SETDESKWALLPAPER = 0x0014
     [uint32]$SPIF_UPDATEINIFILE   = 0x0001
@@ -141,9 +133,19 @@ namespace WinDeslopper {
     ) | Out-Null
 
     if ([string]::IsNullOrEmpty($Path)) {
+        Set-ItemProperty -Path $wallpapersPath -Name 'BackgroundType' -Value 1 -Type DWord
+        Set-ItemProperty -Path $desktopPath -Name 'WallPaper' -Value ''
+        Set-ItemProperty -Path $desktopPath -Name 'WallpaperStyle' -Value '0'
+        Set-ItemProperty -Path $desktopPath -Name 'TileWallpaper' -Value '0'
+        Set-ItemProperty -Path $colorsPath -Name 'Background' -Value '0 0 0'
         [int[]]$desktopElement = 1   # COLOR_DESKTOP
         [int[]]$blackColor     = 0   # RGB(0,0,0)
         [WinDeslopper.WallpaperNativeMethods]::SetSysColors(1, $desktopElement, $blackColor) | Out-Null
+    } else {
+        Set-ItemProperty -Path $wallpapersPath -Name 'BackgroundType' -Value 0 -Type DWord
+        Set-ItemProperty -Path $desktopPath -Name 'WallPaper' -Value $Path
+        Set-ItemProperty -Path $desktopPath -Name 'WallpaperStyle' -Value '10'
+        Set-ItemProperty -Path $desktopPath -Name 'TileWallpaper' -Value '0'
     }
 
     Write-Host "    [SET] Desktop background forced to solid black"
@@ -160,6 +162,7 @@ function Refresh-UserShell {
 Set-ClassicAltTab
 Disable-AutoDndRules
 Refresh-UserPolicy
+Warn-WallpaperOverrides
 Set-DesktopWallpaper -Path ''
 Refresh-UserShell
 Write-Host "    [NOTE] Some taskbar/theme changes may fully apply after Explorer restart or reboot" -ForegroundColor DarkGray

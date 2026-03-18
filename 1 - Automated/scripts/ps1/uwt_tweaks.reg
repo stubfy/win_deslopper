@@ -166,9 +166,36 @@ Windows Registry Editor Version 5.00
 ; using Windows (e.g., "Did you know you can do X?").
 ; SubscribedContent-338389Enabled=0: Disables "Get tips, tricks, and suggestions
 ; as you use Windows" (Settings > Notifications setting backing store).
+; SubscribedContent-310093Enabled=0: Disables the "Welcome Experience" shown after
+;   feature updates (full-screen overlay promoting Microsoft account / OneDrive).
+; SubscribedContent-338388Enabled=0: Disables the Start menu "Occasionally show
+;   suggestions in Start" toggle (sponsored / suggested apps in Start).
+; SystemPaneSuggestionsEnabled=0: Disables the recommended apps section in the
+;   Start menu right panel (system pane suggestions).
+; SubscribedContent-338393Enabled=0: Disables "Show me suggested content in the
+;   Settings app" (promoted features and tips inside Settings).
+; SubscribedContent-353694Enabled=0: Disables the "Suggested content in the
+;   Spotlight" Windows Spotlight customization notification.
+; SubscribedContent-353696Enabled=0: Disables "Get fun facts, tips, tricks and
+;   more on your lock screen" Spotlight recommendations.
+; SubscribedContent-353698Enabled=0: Disables "Show me the Windows welcome
+;   experience" after feature updates (additional flag, complements 310093).
+; SilentInstalledAppsEnabled=0: Prevents Microsoft from silently pushing/installing
+;   apps in the background (e.g., Candy Crush, TikTok injected post-OOBE).
+; DisableSpotlightCollectionOnDesktop=1: Disables the Desktop Spotlight feature
+;   (25H2+) which rotates wallpapers from Microsoft servers and shows ads/tips.
 [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager]
 "SoftLandingEnabled"=dword:00000000
 "SubscribedContent-338389Enabled"=dword:00000000
+"SubscribedContent-310093Enabled"=dword:00000000
+"SubscribedContent-338388Enabled"=dword:00000000
+"SystemPaneSuggestionsEnabled"=dword:00000000
+"SubscribedContent-338393Enabled"=dword:00000000
+"SubscribedContent-353694Enabled"=dword:00000000
+"SubscribedContent-353696Enabled"=dword:00000000
+"SubscribedContent-353698Enabled"=dword:00000000
+"SilentInstalledAppsEnabled"=dword:00000000
+"DisableSpotlightCollectionOnDesktop"=dword:00000001
 
 ; Advertising ID: Windows assigns each device a unique advertising identifier
 ; (similar to a mobile ad ID) used to track cross-app ad targeting.
@@ -250,6 +277,98 @@ Windows Registry Editor Version 5.00
 "LetAppsAccessMicrophone"=dword:00000000
 "LetAppsAccessMessaging"=dword:00000002
 "LetAppsAccessAccountInfo"=dword:00000002
+
+; ---------------------------------------------------------------------------
+; NOTIFICATIONS / ADS - ACCOUNT AND SYNC PROVIDER NAGS
+; ---------------------------------------------------------------------------
+
+; EnableAccountNotifications=0: Disables Microsoft account-related notification
+;   banners in the Start menu and Action Center (e.g., "Sign in to OneDrive").
+; Start_AccountNotifications=0: Hides account notification badges in the Start menu.
+; ShowSyncProviderNotifications=0: Removes "Get more storage" and similar nag
+;   notifications from OneDrive and other sync providers in Explorer.
+; DisableConsumerAccountStateContent=1: Suppresses the consumer account state
+;   banner shown in Settings when using a local account (nudges to sign in to MSA).
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+"EnableAccountNotifications"=dword:00000000
+"Start_AccountNotifications"=dword:00000000
+"ShowSyncProviderNotifications"=dword:00000000
+"DisableConsumerAccountStateContent"=dword:00000001
+
+; Enabled=0: Disables the "Windows Backup reminder" notification toast that
+; appears periodically when no backup is configured, urging users to enable
+; OneDrive backup. On a machine where OneDrive is uninstalled this is a false alarm.
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.BackupReminder]
+"Enabled"=dword:00000000
+
+; OptedIn=0: Disables Windows Mobile Center / Connected Standby opt-in prompts.
+; On desktop PCs without tablet/lid support this prevents spurious mobility UI.
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Mobility]
+"OptedIn"=dword:00000000
+
+; ---------------------------------------------------------------------------
+; PRIVACY - ADDITIONAL TELEMETRY POINTS
+; ---------------------------------------------------------------------------
+
+; HasAccepted=0: Disables the "Online Speech Recognition" feature (Cortana/dictation
+; via Microsoft cloud). Prevents the microphone audio stream from being sent to
+; Microsoft's speech API for transcription.
+[HKEY_CURRENT_USER\Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy]
+"HasAccepted"=dword:00000000
+
+; TailoredExperiencesWithDiagnosticDataEnabled=0: Prevents Windows from using
+; collected diagnostic data to serve personalised tips, ads, and recommendations
+; in the Settings app and Start menu. Complements AllowTelemetry=0 in
+; tweaks_consolidated.reg by disabling the downstream use of whatever data is sent.
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Privacy]
+"TailoredExperiencesWithDiagnosticDataEnabled"=dword:00000000
+
+; Enabled=0: Disables Text Intelligence Platform Collection (TIPC), which captures
+; anonymised keystrokes and ink strokes to improve the Windows text prediction
+; model. Complementary to RestrictImplicitTextCollection in this same file.
+[HKEY_CURRENT_USER\Software\Microsoft\Input\TIPC]
+"Enabled"=dword:00000000
+
+; IsDeviceSearchHistoryEnabled=0: Disables storing the local device search history
+; used by Windows Search to personalise future search results. Prevents leaking
+; past search queries to the search index and any cloud sync path.
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\SearchSettings]
+"IsDeviceSearchHistoryEnabled"=dword:00000000
+
+; ---------------------------------------------------------------------------
+; FIND MY DEVICE
+; ---------------------------------------------------------------------------
+
+; AllowFindMyDevice=0: Disables the "Find My Device" location tracking feature.
+; When enabled, Windows periodically uploads the device's GPS/network location to
+; Microsoft so it can be retrieved from account.microsoft.com. Unneeded on a
+; stationary gaming desktop; a potential privacy concern on any machine.
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\FindMyDevice]
+"AllowFindMyDevice"=dword:00000000
+
+; ---------------------------------------------------------------------------
+; START MENU - RECOMMENDED SECTION
+; ---------------------------------------------------------------------------
+
+; HideRecommendedSection=1: Hides the "Recommended" section in the Windows 11
+; Start menu that shows recently opened files, recently installed apps and
+; Microsoft 365 content. The section generates network requests for cloud-hosted
+; content and personalisation data. Merged into the existing Explorer policy key.
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Explorer]
+"HideRecommendedSection"=dword:00000001
+
+; ---------------------------------------------------------------------------
+; EDGE DIAGNOSTICS
+; ---------------------------------------------------------------------------
+
+; PersonalizationReportingEnabled=0: Disables Edge's personalization data reporting
+; to Microsoft (browsing patterns used to build a user profile for ad targeting).
+; DiagnosticData=0: Sets Edge diagnostic data collection to "off" (no usage or
+; crash data is sent to Microsoft). Complements the AI-specific Edge policies
+; applied by ai_disable.ps1, which target the Copilot/sidebar features.
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge]
+"PersonalizationReportingEnabled"=dword:00000000
+"DiagnosticData"=dword:00000000
 
 ; ---------------------------------------------------------------------------
 ; SMARTSCREEN / APP & BROWSER CONTROL

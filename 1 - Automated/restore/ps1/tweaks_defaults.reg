@@ -104,6 +104,9 @@ Windows Registry Editor Version 5.00
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power]
 "HibernateEnabled"=dword:00000001
 
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Power]
+"HiberbootEnabled"=dword:00000001
+
 ; --- Supprimer le menu contextuel classique ---
 [-HKEY_CURRENT_USER\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}]
 
@@ -203,3 +206,7 @@ Windows Registry Editor Version 5.00
 [HKEY_CURRENT_USER\Software\Microsoft\Clipboard]
 "EnableClipboardHistory"=-
 "EnableCloudClipboard"=-
+
+; --- Supprimer le redirect Game Bar URL protocol ---
+[-HKEY_LOCAL_MACHINE\SOFTWARE\Classes\ms-gamebar]
+[-HKEY_LOCAL_MACHINE\SOFTWARE\Classes\ms-gamebarservices]

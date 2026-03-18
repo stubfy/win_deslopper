@@ -39,8 +39,8 @@ In this pack you will find tweaks for:
 
 - **Better input latency**: by adjusting the timer resolution (via SetTimerResolution or Process Lasso, depending on what you prefer), MSI interrupts, GPU IRQ affinity, mouse acceleration fix, and dynamic tick disabled in the BCD.
 - **Better system fluidity**: power throttling disabled, MMCSS high priority, USB selective suspend disabled, less background activity
-- **Debloat**: Microslop app removal, service startup cleanup (via Autoruns, provided in /Tools/)
-- **Privacy**: 240 OOSU10 tweaks. DiagTrack, Cortana, widgets, Copilot, and Recall/AI features disabled.
+- **Debloat**: Microsoft app removal, OEM bloatware (HP/Dell/Lenovo), pre-installed third-party apps (Spotify, Netflix, TikTok, Candy Crush, Roblox...), service startup cleanup (via Autoruns, provided in /Tools/)
+- **Privacy**: 240 OOSU10 tweaks. DiagTrack, Cortana, widgets, Copilot, Recall, Click to Do, Paint/Notepad AI features, Edge AI/Copilot sidebar, and account nag notifications disabled. Start menu Recommended section hidden.
 - **Boot**: legacy boot menu
 - **Network**: Cloudflare DNS (optional), network throttling disabled, TCP stack tuned (ECN, RSS, CUBIC, Nagle off), LSO off, QoS reservation removed
 - **Windows Update**: configurable profile: Maximum / Security only / Disabled. Security only is often the best.
@@ -140,12 +140,12 @@ Scripts executed in order:
 | `bcdedit.ps1` | Boot configuration (dynamictick, legacy menu) |
 | `power.ps1` | Ultimate Performance power plan + PPM Rocket (immediate max CPU frequency) |
 | `set_dns.ps1` | Optional Cloudflare DNS (1.1.1.1 / 1.0.0.1) |
-| `debloat.ps1` | UWP app removal (Teams, Microsoft 365, Family, Quick Assist, Sticky Notes...) |
+| `debloat.ps1` | UWP app removal: Microsoft bloatware (Teams, Copilot, Outlook, Sticky Notes...), Xbox overlay, OEM apps (HP/Dell/Lenovo), pre-installed third-party apps (Spotify, Netflix, TikTok, Candy Crush...) |
 | `oosu10.ps1` | O&O ShutUp10++ silent mode (240 tweaks) |
 | `timer.ps1` | Optional SetTimerResolution at startup (~0.5 ms), installs VC++ x64 runtime if missing |
 | `usb.ps1` | USB selective suspend disabled |
-| `ai_disable.ps1` | Recall, AI, Copilot disabled (25H2) |
-| `telemetry_tasks.ps1` | Telemetry scheduled tasks + PS7 + Brave |
+| `ai_disable.ps1` | Recall, Click to Do, Copilot, Paint AI (Cocreator/GenFill/GenErase/RemoveBG), Notepad AI, Edge Copilot/sidebar disabled (25H2) |
+| `telemetry_tasks.ps1` | Telemetry scheduled tasks + PS7 telemetry + Brave policies (background, metrics, VPN, Wallet, Leo AI, Rewards, Talk, News) |
 | `network_tweaks.ps1` | Teredo disabled, TCP stack (ECN, RSC off, heuristics off), LSO disabled on active adapters, Nagle disabled per Ethernet interface, QoS bandwidth reservation removed, MaxUserPort extended |
 | `set_windows_update.ps1` | Windows Update profile (Maximum / Security / Disabled) |
 | `firewall.ps1` | Windows Firewall profiles disabled |
@@ -166,14 +166,16 @@ At the end of the script, if you want to disable Defender, you can directly ente
 
 ```powershell
 .\set_windows_update.ps1 -Profil 1   # Maximum - all updates
-.\set_windows_update.ps1 -Profil 2   # Security only - no feature updates, no drivers via WU
+.\set_windows_update.ps1 -Profil 2   # Security only - no feature updates, no drivers via WU, no forced reboot
 .\set_windows_update.ps1 -Profil 3   # Disable - completely disable WU (services + policies)
 .\set_windows_update.ps1             # Interactive menu
 ```
 
+Profile 2 also sets `NoAutoRebootWithLoggedOnUsers=1` (Windows will not reboot to apply an update while you are logged in) and disables the "Get latest updates as soon as they're available" toggle that bypasses the normal update schedule.
+
 ### Registry tweaks applied
 
-- GameDVR / GameBar disabled
+- GameDVR / GameBar disabled + ms-gamebar / ms-gamebarservices URL protocol redirect (silences focus-stealing popups after GameBar removal)
 - MMCSS: GPU Priority 8, Priority 6, Scheduling Category High
 - Power throttling disabled (`PowerThrottlingOff=1`)
 - Network throttling disabled (`NetworkThrottlingIndex=0xFFFFFFFF`, `SystemResponsiveness=0`)
@@ -184,11 +186,12 @@ At the end of the script, if you want to disable Defender, you can directly ente
 - Prefetch left at OS default (no benefit from disabling on modern storage)
 - File extensions visible
 - MarkC mouse acceleration fix (auto-detects DPI scaling)
-- Hibernate disabled
+- Hibernate disabled (`HibernateEnabled=0`) + Hybrid Boot / Fast Startup disabled (`HiberbootEnabled=0`) for a clean cold boot every time
 - Keyboard: delay 0, max repeat rate
 - HDCP disabled (NVIDIA)
 - Classic context menu (Windows 11)
 - Widgets / News disabled
+- Start menu Recommended section hidden
 - Personal shell/theme tweaks are applied separately in `personal_settings.ps1` (dark mode, black accent, taskbar seconds, taskbar End task, classic Alt+Tab, Explorer presentation)
 
 ### Timer resolution options
