@@ -49,6 +49,11 @@ $edgeUpdateDevKeys = @(
     'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdateDev'
     'HKLM:\SOFTWARE\Microsoft\EdgeUpdateDev'
 )
+$edgeUpdateRoots = @(
+    "${env:ProgramFiles(x86)}\Microsoft\EdgeUpdate"
+    "$env:ProgramFiles\Microsoft\EdgeUpdate"
+    "$env:LOCALAPPDATA\Microsoft\EdgeUpdate"
+)
 $dummyEdgePath = "$env:SystemRoot\SystemApps\Microsoft.MicrosoftEdge_8wekyb3d8bbwe"
 $dummyEdgeExe  = Join-Path $dummyEdgePath 'MicrosoftEdge.exe'
 $webView2DisplayName = 'Microsoft Edge WebView2 Runtime'
@@ -86,21 +91,7 @@ function Get-UninstallEntryByName {
 }
 
 function Test-EdgeInstalled {
-    foreach ($root in $edgeRoots) {
-        if (-not (Test-Path $root)) { continue }
-
-        if (Test-Path (Join-Path $root 'msedge.exe')) {
-            return $true
-        }
-
-        $exe = Get-ChildItem -Path $root -Filter 'msedge.exe' -Recurse -ErrorAction SilentlyContinue |
-               Select-Object -First 1
-        if ($exe) {
-            return $true
-        }
-    }
-
-    return $false
+    return (@(Get-EdgePresenceEvidence).Count -gt 0)
 }
 
 function Get-EdgeUninstallInfo {
@@ -152,8 +143,18 @@ function Get-EdgePresenceEvidence {
         }
     }
 
+    foreach ($root in $edgeUpdateRoots) {
+        if (Test-Path $root) {
+            $evidence.Add("update files under $root")
+        }
+    }
+
     foreach ($setup in Get-EdgeSetupCandidates) {
         $evidence.Add("installer $($setup.FullName)")
+    }
+
+    foreach ($key in Get-EdgeClientKeys) {
+        $evidence.Add("client key $key")
     }
 
     if (Get-UninstallEntryByName -DisplayNamePattern 'Microsoft Edge*') {
@@ -195,9 +196,12 @@ function Get-WebView2PresenceEvidence {
         }
     }
 
-    $appxPackages = @(Get-AppxPackage -AllUsers -Name '*Win32WebViewHost*' -ErrorAction SilentlyContinue)
+    $appxPackages = @(Get-WebView2AppxPackages)
     foreach ($pkg in $appxPackages) {
-        $evidence.Add("AppX $($pkg.PackageFullName)")
+        $installLocation = [string]$pkg.InstallLocation
+        if ($installLocation -and (Test-Path -LiteralPath $installLocation)) {
+            $evidence.Add("AppX $($pkg.PackageFullName)")
+        }
     }
 
     try {
@@ -282,6 +286,58 @@ function Remove-EdgeShortcuts {
         if (Test-Path $path) {
             Remove-Item $path -Force -ErrorAction SilentlyContinue
         }
+    }
+}
+
+function Get-EdgeClientKeys {
+    $paths = @(
+        'HKLM:\SOFTWARE\Microsoft\EdgeUpdate\Clients\*'
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\*'
+        'HKCU:\Software\Microsoft\EdgeUpdate\Clients\*'
+    )
+
+    return @(Get-ItemProperty -Path $paths -ErrorAction SilentlyContinue |
+        Where-Object { $_.name -in @('Microsoft Edge', 'Microsoft Edge Update') } |
+        Select-Object -ExpandProperty PSPath -Unique)
+}
+
+function Get-WebView2AppxPackages {
+    try {
+        return @(Get-AppxPackage -AllUsers -Name '*Win32WebViewHost*' -ErrorAction Stop)
+    } catch {
+        return @()
+    }
+}
+
+function Remove-RegistryKeys {
+    param([Parameter(Mandatory = $true)][string[]]$Keys)
+
+    foreach ($key in $Keys | Select-Object -Unique) {
+        if (-not $key) { continue }
+        if (Test-Path -LiteralPath $key) {
+            Remove-Item -LiteralPath $key -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Host "    Reg removed    : $key"
+        }
+    }
+}
+
+function Remove-OwnedTree {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+
+    if (-not (Test-Path -LiteralPath $Path)) { return }
+
+    Write-Host "    Deleting $Label : $Path"
+    & takeown.exe /f "$Path" /r /d y 2>$null | Out-Null
+    & icacls.exe "$Path" /grant '*S-1-5-32-544:(F)' /t /c /q 2>$null | Out-Null
+    Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction SilentlyContinue
+
+    if (Test-Path -LiteralPath $Path) {
+        Write-Host "    [WARNING] Could not fully remove : $Path" -ForegroundColor Yellow
+    } else {
+        Write-Host "    Deleted        : $Path"
     }
 }
 
@@ -386,6 +442,20 @@ function Uninstall-Edge {
                 }
             }
         }
+
+        Get-Process -Name @('msedge', 'MicrosoftEdgeUpdate', 'widgets', 'msedgewebview2') -ErrorAction SilentlyContinue |
+            Stop-Process -Force -ErrorAction SilentlyContinue
+
+        foreach ($dir in $edgeRoots) {
+            Remove-OwnedTree -Path $dir -Label 'Edge files'
+        }
+        foreach ($dir in $edgeUpdateRoots) {
+            Remove-OwnedTree -Path $dir -Label 'EdgeUpdate files'
+        }
+
+        Remove-RegistryKeys -Keys $edgeUninstallKeys
+        Remove-RegistryKeys -Keys (Get-EdgeClientKeys)
+        Unregister-ScheduledTask -TaskName 'MicrosoftEdgeUpdate*' -Confirm:$false -ErrorAction SilentlyContinue
     } catch {
         Write-Host "    [WARNING] Edge uninstall hit an error: $($_.Exception.Message)" -ForegroundColor Yellow
     }
@@ -427,7 +497,7 @@ function Uninstall-Edge {
 function Remove-WebView2AppxPackage {
     # Win32WebViewHost is the AppX package that delivers WebView2 on Windows 11.
     # It is marked non-removable by default; DISM can unlock it, then Remove-AppxPackage works.
-    $packages = Get-AppxPackage -AllUsers -Name '*Win32WebViewHost*' -ErrorAction SilentlyContinue
+    $packages = @(Get-WebView2AppxPackages)
     if (-not $packages) { return }
 
     foreach ($pkg in $packages) {
@@ -454,20 +524,57 @@ function Remove-WebView2AppxPackage {
             Write-Host "    Deprovision    : skipped ($($_.Exception.Message))" -ForegroundColor DarkGray
         }
 
-        # Try to remove the package itself (may fail for system apps — that's OK, DISM unlock is what matters)
         try {
             Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction Stop
             Write-Host "    AppX removed   : $($pkg.PackageFullName)"
         } catch {
             Write-Host "    AppX removal   : still registered (system app or pending reboot)" -ForegroundColor DarkGray
         }
+
+        $installLocation = [string]$pkg.InstallLocation
+        if ($installLocation) {
+            Remove-OwnedTree -Path $installLocation -Label 'WebView2 AppX files'
+        }
     }
 }
 
 function Uninstall-WebView2 {
+    $webView2Info = Get-WebView2UninstallInfo
+    $webView2ExitCodes = [System.Collections.Generic.List[int]]::new()
+
     # Kill lingering WebView2 and EdgeUpdate processes before attempting
-    Get-Process -Name @('msedgewebview2', 'MicrosoftEdgeUpdate') -ErrorAction SilentlyContinue |
+    Get-Process -Name @('msedgewebview2', 'MicrosoftEdgeUpdate', 'widgets', 'msedge') -ErrorAction SilentlyContinue |
         Stop-Process -Force -ErrorAction SilentlyContinue
+
+    if ($webView2Info) {
+        $commandLine = $webView2Info.UninstallString
+        if ($commandLine -notmatch '(?i)--force-uninstall') {
+            $commandLine += ' --force-uninstall'
+        }
+
+        Write-Host "    Launching WebView2 uninstall..."
+        $proc = Invoke-InstallerCommand -CommandLine $commandLine
+        $webView2ExitCodes.Add([int]$proc.ExitCode)
+        Write-Host "    Exit code      : $($proc.ExitCode)"
+        & shutdown.exe /a 2>$null
+    }
+
+    if (Test-WebView2Installed) {
+        foreach ($setup in Get-WebView2SetupCandidates) {
+            $scope = if ($setup.FullName -like "$env:LOCALAPPDATA*") { '--user-level' } else { '--system-level' }
+            $commandLine = "`"$($setup.FullName)`" --uninstall --force-uninstall $scope --verbose-logging --msedgewebview"
+
+            Write-Host "    Fallback setup : $($setup.FullName)"
+            $proc = Invoke-InstallerCommand -CommandLine $commandLine
+            $webView2ExitCodes.Add([int]$proc.ExitCode)
+            Write-Host "    Exit code      : $($proc.ExitCode)"
+            & shutdown.exe /a 2>$null
+
+            if (-not (Test-WebView2Installed)) {
+                break
+            }
+        }
+    }
 
     # Step 1: DISM unlock + AppX removal (best-effort complement)
     Remove-WebView2AppxPackage
@@ -528,6 +635,9 @@ function Uninstall-WebView2 {
     $presenceEvidence = @(Get-WebView2PresenceEvidence)
     if ($presenceEvidence.Count -gt 0) {
         Write-Host "    [WARNING] WebView2 Runtime is still present after the uninstall flow." -ForegroundColor Yellow
+        if ($webView2ExitCodes.Count -gt 0 -and ($webView2ExitCodes | Select-Object -Unique) -contains 0) {
+            Write-Host "              Installer exited 0, but WebView2 is still detected." -ForegroundColor Yellow
+        }
         foreach ($item in ($presenceEvidence | Select-Object -First 3)) {
             Write-Host "              Still detected via: $item" -ForegroundColor Yellow
         }
@@ -579,17 +689,24 @@ if (-not $edgeInstalled -and -not $webView2Installed) {
     return
 }
 
+$edgeOk = $true
+$webView2Ok = $true
+
 if ($edgeInstalled) {
     Write-Host "    Looking for Microsoft Edge..."
-    Uninstall-Edge | Out-Null
+    $edgeOk = Uninstall-Edge
 } else {
     Write-Host "    Edge not found (already removed or non-standard path)." -ForegroundColor Gray
 }
 
 if ($webView2Installed) {
     Write-Host "    Looking for Microsoft Edge WebView2 Runtime..."
-    Uninstall-WebView2 | Out-Null
+    $webView2Ok = Uninstall-WebView2
 } else {
     Write-Host "    WebView2 Runtime not found." -ForegroundColor Gray
+}
+
+if (-not $edgeOk -or -not $webView2Ok) {
+    throw 'Edge/WebView2 uninstall incomplete.'
 }
 
