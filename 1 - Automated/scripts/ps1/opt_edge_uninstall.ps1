@@ -464,7 +464,8 @@ function Uninstall-Edge {
         }
 
         Remove-RegistryKeys -Keys $edgeUninstallKeys
-        Remove-RegistryKeys -Keys (Get-EdgeClientKeys)
+        $clientKeys = @(Get-EdgeClientKeys)
+        if ($clientKeys.Count -gt 0) { Remove-RegistryKeys -Keys $clientKeys }
         Unregister-ScheduledTask -TaskName 'MicrosoftEdgeUpdate*' -Confirm:$false -ErrorAction SilentlyContinue
     } catch {
         Write-Host "    [WARNING] Edge uninstall hit an error: $($_.Exception.Message)" -ForegroundColor Yellow
