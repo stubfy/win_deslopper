@@ -327,9 +327,10 @@ function Remove-AdvancedAiAppxPackages {
             Write-Ok "Removed AppX package $($pkg.Name)"
         } else {
             [void]$systemRetry.Add([pscustomobject]@{
-                Name        = $pkg.Name
-                PackageFull = $pkg.PackageFullName
-                Family      = $pkg.PackageFamilyName
+                Name            = $pkg.Name
+                PackageFull     = $pkg.PackageFullName
+                Family          = $pkg.PackageFamilyName
+                InstallLocation = [string]$pkg.InstallLocation
             })
         }
     }
@@ -344,27 +345,111 @@ function Remove-AdvancedAiAppxPackages {
     }
 
     if ($systemRetry.Count -gt 0) {
-        $json = ($systemRetry | Select-Object -Unique PackageFull, Family, Name | ConvertTo-Json -Depth 4 -Compress).Replace("'", "''")
+        $json = ($systemRetry | Select-Object -Unique PackageFull, Family, Name, InstallLocation | ConvertTo-Json -Depth 4 -Compress).Replace("'", "''")
         $systemScript = @"
+function Remove-RegistryKeyForced {
+    param([Parameter(Mandatory)][string]`$LiteralPath)
+
+    if (-not (Test-Path -LiteralPath `$LiteralPath)) {
+        return
+    }
+
+    try {
+        Remove-Item -LiteralPath `$LiteralPath -Recurse -Force -ErrorAction Stop
+        return
+    } catch {}
+
+    try {
+        `$admins = New-Object System.Security.Principal.NTAccount('Administrators')
+        `$acl = Get-Acl -LiteralPath `$LiteralPath -ErrorAction Stop
+        `$acl.SetOwner(`$admins)
+        Set-Acl -LiteralPath `$LiteralPath -AclObject `$acl -ErrorAction Stop
+        `$acl = Get-Acl -LiteralPath `$LiteralPath -ErrorAction Stop
+        `$rule = New-Object System.Security.AccessControl.RegistryAccessRule('Administrators', 'FullControl', 'ContainerInherit', 'None', 'Allow')
+        `$acl.SetAccessRule(`$rule)
+        Set-Acl -LiteralPath `$LiteralPath -AclObject `$acl -ErrorAction Stop
+    } catch {}
+
+    try {
+        Remove-Item -LiteralPath `$LiteralPath -Recurse -Force -ErrorAction Stop
+    } catch {}
+}
+
+function Remove-FilePathForced {
+    param([Parameter(Mandatory)][string]`$LiteralPath)
+
+    if (-not `$LiteralPath -or -not (Test-Path -LiteralPath `$LiteralPath)) {
+        return
+    }
+
+    try {
+        Remove-Item -LiteralPath `$LiteralPath -Recurse -Force -ErrorAction Stop
+        return
+    } catch {}
+
+    try { & takeown.exe /f "`$LiteralPath" /r /d y 2>`$null | Out-Null } catch {}
+    try { & icacls.exe "`$LiteralPath" /grant '*S-1-5-32-544:(F)' /t /c /q 2>`$null | Out-Null } catch {}
+
+    try {
+        Remove-Item -LiteralPath `$LiteralPath -Recurse -Force -ErrorAction Stop
+    } catch {}
+}
+
 `$targets = '$json' | ConvertFrom-Json
+`$appxRoots = @(
+    'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Applications',
+    'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\InboxApplications',
+    'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned',
+    'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\EndOfLife',
+    'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\PackageRepository\Packages',
+    'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\PackageRepository\Families'
+)
+
 foreach (`$target in @(`$targets)) {
     try { & dism.exe /Online /Set-NonRemovableAppsPolicy /PackageFamily:`$target.Family /NonRemovable:0 | Out-Null } catch {}
     try { & dism.exe /Online /Set-NonRemovableAppsPolicy /PackageFamilyName:`$target.Family /NonRemovable:0 | Out-Null } catch {}
+    try { Remove-AppxPackage -Package `$target.PackageFull -AllUsers -ErrorAction Stop | Out-Null } catch {}
+
     try {
-        Remove-AppxPackage -Package `$target.PackageFull -AllUsers -ErrorAction Stop
-        Write-Output ("Retried AppX removal as SYSTEM: {0}" -f `$target.PackageFull)
-        continue
-    } catch {}
-    try {
-        Get-AppxPackage -AllUsers -Name `$target.Name -ErrorAction SilentlyContinue | ForEach-Object {
-            Remove-AppxPackage -Package `$_.PackageFullName -AllUsers -ErrorAction SilentlyContinue
+        foreach (`$pkg in @(Get-AppxPackage -AllUsers -Name `$target.Name -ErrorAction SilentlyContinue)) {
+            foreach (`$userInfo in @(`$pkg.PackageUserInformation)) {
+                `$sid = ''
+                try { `$sid = [string]`$userInfo.UserSecurityId } catch {}
+                if (-not [string]::IsNullOrWhiteSpace(`$sid)) {
+                    try { Remove-AppxPackage -Package `$pkg.PackageFullName -User `$sid -ErrorAction SilentlyContinue | Out-Null } catch {}
+                }
+            }
         }
     } catch {}
-    Write-Output ("AppX still needed retry: {0}" -f `$target.PackageFull)
+
+    foreach (`$root in `$appxRoots) {
+        if (-not (Test-Path -LiteralPath `$root)) {
+            continue
+        }
+
+        foreach (`$child in @(Get-ChildItem -LiteralPath `$root -Recurse -ErrorAction SilentlyContinue)) {
+            `$leaf = `$child.PSChildName
+            if (`$leaf -eq `$target.PackageFull -or `$leaf -eq `$target.Family -or `$leaf -like ('*' + `$target.Name + '*') -or `$leaf -like ('*' + `$target.Family + '*')) {
+                Remove-RegistryKeyForced -LiteralPath `$child.PSPath
+            }
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace(`$target.InstallLocation)) {
+        Remove-FilePathForced -LiteralPath `$target.InstallLocation
+        `$installLeaf = Split-Path -Path `$target.InstallLocation -Leaf
+        if (-not [string]::IsNullOrWhiteSpace(`$installLeaf)) {
+            Remove-FilePathForced -LiteralPath (Join-Path `$env:windir ('SystemApps\' + `$installLeaf))
+            Remove-FilePathForced -LiteralPath (Join-Path `$env:windir ('SystemApps\SxS\' + `$installLeaf))
+        }
+    }
+
+    Remove-FilePathForced -LiteralPath (Join-Path `$env:ProgramFiles ('WindowsApps\' + `$target.PackageFull))
+    Write-Output ('Forced AppX cleanup attempted: {0}' -f `$target.PackageFull)
 }
 "@
         try {
-            Invoke-AsSystemScript -Name 'remove-ai-appx' -ScriptBody $systemScript -TimeoutSeconds 600
+            Invoke-AsSystemScript -Name 'remove-ai-appx' -ScriptBody $systemScript -TimeoutSeconds 900
         } catch {
             Write-Warn "SYSTEM retry for AppX removal failed: $($_.Exception.Message)"
         }
@@ -372,7 +457,7 @@ foreach (`$target in @(`$targets)) {
         foreach ($target in $systemRetry) {
             $stillPresent = @(Get-AppxPackage -AllUsers -ErrorAction SilentlyContinue | Where-Object { $_.PackageFullName -eq $target.PackageFull })
             if ($stillPresent.Count -eq 0) {
-                Write-Ok "Removed AppX package after SYSTEM retry $($target.Name)"
+                Write-Ok "Removed AppX package after forced retry $($target.Name)"
             } else {
                 Write-Warn "AppX package still present after retry: $($target.PackageFull)"
             }
@@ -383,6 +468,7 @@ foreach (`$target in @(`$targets)) {
         Write-Info 'No additional AI AppX packages found'
     }
 }
+
 function Remove-RecallOptionalFeature {
     $features = @(Get-WindowsOptionalFeature -Online -ErrorAction SilentlyContinue | Where-Object {
         $_.FeatureName -match 'Recall'
@@ -440,23 +526,55 @@ function Remove-AiCbsPackages {
     if ($systemRetry.Count -gt 0) {
         $quotedPackages = ($systemRetry | Select-Object -Unique | ForEach-Object { "'" + ($_.Replace("'", "''")) + "'" }) -join ', '
         $systemScript = @"
+function Remove-RegistryKeyForced {
+    param([Parameter(Mandatory)][string]`$LiteralPath)
+
+    if (-not (Test-Path -LiteralPath `$LiteralPath)) {
+        return
+    }
+
+    try {
+        Remove-Item -LiteralPath `$LiteralPath -Recurse -Force -ErrorAction Stop
+        return
+    } catch {}
+
+    try {
+        `$admins = New-Object System.Security.Principal.NTAccount('Administrators')
+        `$acl = Get-Acl -LiteralPath `$LiteralPath -ErrorAction Stop
+        `$acl.SetOwner(`$admins)
+        Set-Acl -LiteralPath `$LiteralPath -AclObject `$acl -ErrorAction Stop
+        `$acl = Get-Acl -LiteralPath `$LiteralPath -ErrorAction Stop
+        `$rule = New-Object System.Security.AccessControl.RegistryAccessRule('Administrators', 'FullControl', 'ContainerInherit', 'None', 'Allow')
+        `$acl.SetAccessRule(`$rule)
+        Set-Acl -LiteralPath `$LiteralPath -AclObject `$acl -ErrorAction Stop
+    } catch {}
+
+    try {
+        Remove-Item -LiteralPath `$LiteralPath -Recurse -Force -ErrorAction Stop
+    } catch {}
+}
+
+`$cbsRoot = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages'
 `$packages = @($quotedPackages)
 foreach (`$package in `$packages) {
     try {
         Remove-WindowsPackage -Online -PackageName `$package -NoRestart -ErrorAction Stop | Out-Null
-        Write-Output ("Removed CBS package as SYSTEM: {0}" -f `$package)
+        Write-Output ('Removed CBS package as SYSTEM: {0}' -f `$package)
         continue
     } catch {}
+
     try {
         & dism.exe /Online /Remove-Package /PackageName:`$package /NoRestart | Out-Null
-        Write-Output ("Requested CBS removal via DISM as SYSTEM: {0}" -f `$package)
-    } catch {
-        Write-Output ("CBS removal warning for {0}: {1}" -f `$package, `$_.Exception.Message)
+    } catch {}
+
+    if (Test-Path -LiteralPath (Join-Path `$cbsRoot `$package)) {
+        Remove-RegistryKeyForced -LiteralPath (Join-Path `$cbsRoot `$package)
+        Write-Output ('Forced CBS registry cleanup attempted: {0}' -f `$package)
     }
 }
 "@
         try {
-            Invoke-AsSystemScript -Name 'remove-ai-cbs' -ScriptBody $systemScript -TimeoutSeconds 600
+            Invoke-AsSystemScript -Name 'remove-ai-cbs' -ScriptBody $systemScript -TimeoutSeconds 900
         } catch {
             Write-Warn "SYSTEM retry for AI CBS packages failed: $($_.Exception.Message)"
         }
@@ -466,10 +584,11 @@ foreach (`$package in `$packages) {
         if (Test-Path -LiteralPath (Join-Path $cbsRoot $package)) {
             Write-Warn "CBS package still present after retry: $package"
         } else {
-            Write-Ok "Removed CBS package after retry $package"
+            Write-Ok "Removed CBS package after forced retry $package"
         }
     }
 }
+
 function Remove-AiFiles {
     $patterns = @(
         "$env:ProgramFiles\WindowsApps\MicrosoftWindows.Client.AIX*",
