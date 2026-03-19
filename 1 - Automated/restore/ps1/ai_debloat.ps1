@@ -1,10 +1,8 @@
-# restore\ai_debloat.ps1 - Remove AI deep-debloat hooks and restore saved files
+# restore\ai_debloat.ps1 - Restore saved AI deep-debloat files
 
 $ROOT       = Split-Path (Split-Path (Split-Path $PSScriptRoot))
 $BACKUP_DIR = Join-Path $ROOT 'backup'
 $STATE_FILE = Join-Path $BACKUP_DIR 'ai_debloat_state.json'
-$TASK_PATH  = '\win_desloperf\'
-$TASK_NAME  = 'AI Cleanup Check'
 
 function Write-Info {
     param([string]$Message)
@@ -32,22 +30,6 @@ try {
 } catch {
     Write-Warn "Unable to read ai_debloat_state.json: $($_.Exception.Message)"
     return
-}
-
-try {
-    Unregister-ScheduledTask -TaskPath $TASK_PATH -TaskName $TASK_NAME -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
-    Write-Ok 'Removed \win_desloperf\AI Cleanup Check'
-} catch {
-    Write-Warn "Unable to remove AI Cleanup Check task: $($_.Exception.Message)"
-}
-
-if (-not [string]::IsNullOrWhiteSpace($state.InstalledCabPackage)) {
-    try {
-        Remove-WindowsPackage -Online -PackageName $state.InstalledCabPackage -NoRestart -ErrorAction Stop | Out-Null
-        Write-Ok 'Removed custom AI anti-reinstall package'
-    } catch {
-        Write-Warn "Unable to remove custom AI anti-reinstall package: $($_.Exception.Message)"
-    }
 }
 
 if (-not [string]::IsNullOrWhiteSpace($state.RegionPolicyBackup) -and (Test-Path -LiteralPath $state.RegionPolicyBackup)) {

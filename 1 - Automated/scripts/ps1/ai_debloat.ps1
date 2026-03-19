@@ -1,18 +1,11 @@
 #Requires -RunAsAdministrator
-param(
-    [switch]$PostUpdateRepair
-)
 
 $ErrorActionPreference = 'Continue'
 $ROOT                  = Split-Path (Split-Path (Split-Path $MyInvocation.MyCommand.Path))
-$TOOLS_ROOT            = Join-Path $ROOT 'tools\remove_windows_ai'
-$PACKAGE_ROOT          = Join-Path $TOOLS_ROOT 'RemoveWindowsAIPackage'
 $BACKUP_DIR            = Join-Path $ROOT 'backup'
 $STATE_FILE            = Join-Path $BACKUP_DIR 'ai_debloat_state.json'
 $REGION_POLICY_PATH    = Join-Path $env:windir 'System32\IntegratedServicesRegionPolicySet.json'
-$TASK_NAME             = 'AI Cleanup Check'
 $TASK_PATH             = '\win_desloperf\'
-$TASK_FULL_NAME        = "$TASK_PATH$TASK_NAME"
 
 function Write-Info {
     param([string]$Message)
@@ -37,24 +30,11 @@ function Ensure-Directory {
     }
 }
 
-function Get-BuildStamp {
-    try {
-        $cv = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -ErrorAction Stop
-        return "{0}.{1}" -f $cv.CurrentBuild, $cv.UBR
-    } catch {
-        return [System.Environment]::OSVersion.Version.ToString()
-    }
-}
-
 function Get-InitialState {
     return [ordered]@{
-        LastBuild           = ''
-        InstalledCabPackage = ''
-        InstalledCabPath    = ''
-        RegionPolicyBackup  = ''
-        XboxSettingsBackup  = ''
-        UpdateCleanupTask   = $false
-        LastRunUtc          = ''
+        RegionPolicyBackup = ''
+        XboxSettingsBackup = ''
+        LastRunUtc         = ''
     }
 }
 
@@ -82,30 +62,6 @@ function Save-State {
     Ensure-Directory -Path $BACKUP_DIR
     $State['LastRunUtc'] = (Get-Date).ToUniversalTime().ToString('o')
     $State | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $STATE_FILE -Encoding UTF8
-}
-
-function Get-IsArm64 {
-    try {
-        return ((Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction Stop).SystemType -match 'ARM64') -or
-            ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64')
-    } catch {
-        return $env:PROCESSOR_ARCHITECTURE -eq 'ARM64'
-    }
-}
-
-function Get-CabPath {
-    $archFolder = if (Get-IsArm64) { 'arm64' } else { 'amd64' }
-    $folder = Join-Path $PACKAGE_ROOT $archFolder
-    if (-not (Test-Path -LiteralPath $folder)) {
-        throw "AI package asset folder not found: $folder"
-    }
-
-    $cab = Get-ChildItem -LiteralPath $folder -Filter '*.cab' -File -ErrorAction Stop | Select-Object -First 1
-    if (-not $cab) {
-        throw "No CAB asset found under: $folder"
-    }
-
-    return $cab.FullName
 }
 
 function Backup-FileOnce {
@@ -316,33 +272,6 @@ Write-Output "Patched policies: `$changed"
 "@
         Invoke-AsSystemScript -Name 'region-policy-patch' -ScriptBody $systemScript
         Write-Ok 'Integrated services region policy patched via SYSTEM task'
-    }
-}
-
-function Install-AntiReinstallPackage {
-    param([Parameter(Mandatory)][hashtable]$State)
-
-    $existing = Get-WindowsPackage -Online -ErrorAction SilentlyContinue | Where-Object { $_.PackageName -like '*ZoicwareRemoveWindowsAI*' }
-    if ($existing) {
-        $State['InstalledCabPackage'] = $existing[0].PackageName
-        Write-Info 'Custom anti-reinstall package already installed'
-        return
-    }
-
-    $cabPath = Get-CabPath
-    try {
-        Add-WindowsPackage -Online -PackagePath $cabPath -NoRestart -ErrorAction Stop | Out-Null
-        Start-Sleep -Seconds 2
-        $installed = Get-WindowsPackage -Online -ErrorAction SilentlyContinue | Where-Object { $_.PackageName -like '*ZoicwareRemoveWindowsAI*' } | Select-Object -First 1
-        if ($installed) {
-            $State['InstalledCabPackage'] = $installed.PackageName
-            $State['InstalledCabPath'] = $cabPath
-            Write-Ok 'Custom anti-reinstall package installed'
-        } else {
-            Write-Warn 'Custom anti-reinstall package install did not report a package identity'
-        }
-    } catch {
-        Write-Warn "Failed to install anti-reinstall CAB: $($_.Exception.Message)"
     }
 }
 
@@ -633,24 +562,6 @@ function Disable-GamingCopilot {
     }
 }
 
-function Register-UpdateCleanupTask {
-    param([Parameter(Mandatory)][hashtable]$State)
-
-    $scriptPath = $MyInvocation.MyCommand.Path
-    $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -PostUpdateRepair"
-    $trigger = New-ScheduledTaskTrigger -AtLogOn
-    $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -RunLevel Highest -LogonType ServiceAccount
-    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -Hidden
-
-    try {
-        Register-ScheduledTask -TaskPath $TASK_PATH -TaskName $TASK_NAME -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
-        $State['UpdateCleanupTask'] = $true
-        Write-Ok "Registered $TASK_FULL_NAME"
-    } catch {
-        Write-Warn "Unable to register ${TASK_FULL_NAME}: $($_.Exception.Message)"
-    }
-}
-
 function Write-Summary {
     $remaining = @()
     $remaining += @(Get-AppxPackage -AllUsers -ErrorAction SilentlyContinue | Where-Object { Test-AiPackageName -Name $_.Name } | Select-Object -ExpandProperty Name -Unique)
@@ -667,32 +578,18 @@ function Write-Summary {
 
 Ensure-Directory -Path $BACKUP_DIR
 $state = Load-State
-$script:StateRef = $state
-$currentBuild = Get-BuildStamp
-
-if ($PostUpdateRepair -and $state['LastBuild'] -eq $currentBuild) {
-    Write-Info "Windows build unchanged ($currentBuild), AI post-update repair skipped"
-    exit 0
-}
 
 Write-Host ''
-if ($PostUpdateRepair) {
-    Write-Host '>>> AI deep debloat post-update repair' -ForegroundColor Yellow
-} else {
-    Write-Host '>>> AI deep debloat' -ForegroundColor Yellow
-}
+Write-Host '>>> AI deep debloat' -ForegroundColor Yellow
 
 Patch-IntegratedServicesRegionPolicy -State $state
-Install-AntiReinstallPackage -State $state
 Disable-GamingCopilot
 Remove-AdvancedAiAppxPackages
 Remove-RecallOptionalFeature
 Remove-AiCbsPackages
 Remove-AiFiles
 Remove-RecallTasks
-Register-UpdateCleanupTask -State $state
 Write-Summary
 
-$state['LastBuild'] = $currentBuild
 Save-State -State $state
-Write-Ok "AI deep debloat state saved for build $currentBuild"
+Write-Ok 'AI deep debloat state saved'

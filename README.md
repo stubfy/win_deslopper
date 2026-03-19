@@ -141,7 +141,7 @@ Scripts executed in order:
 | `set_dns.ps1` | Optional Cloudflare DNS (1.1.1.1 / 1.0.0.1) |
 | `debloat.ps1` | UWP app removal: Microsoft bloatware (Teams, Copilot, Outlook, Sticky Notes...), Xbox overlay, OEM apps (HP/Dell/Lenovo), pre-installed third-party apps (Spotify, Netflix, TikTok, Candy Crush...) |
 | `privacy.ps1` | O&O ShutUp10++ (240 tweaks) + Recall, Click to Do, Copilot, Office AI policies, Paint AI, Notepad AI, Edge AI/sidebar disabled + telemetry scheduled tasks + PS7 telemetry + Brave policies + privacy registry tweaks |
-| `ai_debloat.ps1` | Deep AI cleanup: advanced AI AppX removal, Recall optional feature removal, CBS package cleanup, anti-reinstall CAB install, region policy patch, and post-update cleanup task |
+| `ai_debloat.ps1` | Deep AI cleanup: advanced AI AppX removal, Recall optional feature removal, CBS package cleanup, region policy patch, and targeted file/task cleanup |
 | `timer.ps1` | Optional SetTimerResolution at startup (~0.5 ms), installs VC++ x64 runtime if missing |
 | `network_tweaks.ps1` | Teredo disabled, TCP stack (ECN, RSC off, heuristics off), LSO disabled on active adapters, Nagle disabled per Ethernet interface, QoS bandwidth reservation removed, MaxUserPort extended |
 | `set_windows_update.ps1` | Windows Update profile (Maximum / Security / Disabled) |
@@ -337,7 +337,7 @@ Restores in order:
 - DNS (back to DHCP)
 - SetTimerResolution (startup shortcut removed)
 - Privacy & AI (privacy registry defaults + AI/Recall/Copilot policy keys removed)
-- AI deep debloat hooks (post-update cleanup task removed, saved JSON/Game Bar backups restored, custom anti-reinstall CAB removed when possible)
+- AI deep debloat backups (saved JSON/Game Bar backups restored where available)
 - UWP app reinstallation help (`debloat_restore.ps1` provides Store/winget commands)
 - Network tweaks (Teredo, TCP stack, LSO, Nagle, QoS restored to Windows defaults)
 - Windows Update (restored to Maximum / Windows default)

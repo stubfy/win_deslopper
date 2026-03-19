@@ -18,7 +18,7 @@
         [7 - DNS]            -> Cloudflare DNS (user choice)
         debloat              -> UWP app removal
         privacy              -> OOSU10 + AI/Copilot/Recall + telemetry tasks + privacy registry
-        ai_debloat           -> Deep AI package / CBS / Recall cleanup + post-update hook
+        ai_debloat           -> Deep AI package / CBS / Recall cleanup
         timer                -> Optional SetTimerResolution startup
         network_tweaks       -> Teredo disable + TCP/Nagle/QoS
         [8 - Windows Update] -> WU profile (user choice)
@@ -684,7 +684,7 @@ Invoke-Script "$SCRIPTS\debloat.ps1"
 Write-Step 'PHASE B.6 - Privacy & AI (OOSU10, telemetry, AI/Copilot, privacy registry)'
 Invoke-Script "$SCRIPTS\privacy.ps1"
 
-Write-Step 'PHASE B.7 - AI deep debloat (AppX/CBS/Recall/update hook)'
+Write-Step 'PHASE B.7 - AI deep debloat (AppX/CBS/Recall cleanup)'
 Invoke-Script "$SCRIPTS\ai_debloat.ps1"
 
 if ($enableTimerTool) {
