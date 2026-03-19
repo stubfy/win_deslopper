@@ -55,6 +55,7 @@ $LOG_DIR               = Join-Path $env:APPDATA 'win_desloperf\logs'
 $LOG_FILE              = Join-Path $LOG_DIR 'win_desloperf.log'
 
 if (-not (Test-Path $LOG_DIR)) { New-Item -ItemType Directory -Path $LOG_DIR -Force | Out-Null }
+if (Test-Path $LOG_FILE) { Remove-Item -LiteralPath $LOG_FILE -Force -ErrorAction SilentlyContinue }
 
 function Get-PackVersion {
     param([string]$PackRoot)
