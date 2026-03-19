@@ -287,14 +287,17 @@ function Uninstall-MsiexecAppByName {
 
 function Remove-EdgeShortcuts {
     $shortcutPaths = @(
-        (Join-Path $env:PUBLIC 'Desktop\Microsoft Edge.lnk')
-        (Join-Path $env:USERPROFILE 'Desktop\Microsoft Edge.lnk')
-        (Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk')
+        (Join-Path $env:PUBLIC        'Desktop\Microsoft Edge.lnk')
+        (Join-Path $env:USERPROFILE   'Desktop\Microsoft Edge.lnk')
+        (Join-Path $env:ProgramData   'Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk')
+        (Join-Path $env:APPDATA       'Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk')
+        (Join-Path $env:APPDATA       'Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\Microsoft Edge.lnk')
     )
 
     foreach ($path in $shortcutPaths) {
         if (Test-Path $path) {
             Remove-Item $path -Force -ErrorAction SilentlyContinue
+            Write-Host "    Shortcut removed: $path"
         }
     }
 }
@@ -491,8 +494,6 @@ function Uninstall-Edge {
         Write-Host "              You can retry removal manually from Settings > Apps." -ForegroundColor Yellow
         return $false
     }
-
-    Remove-EdgeShortcuts
 
     $edgeUpdatePath = 'HKLM:\SOFTWARE\Microsoft\EdgeUpdate'
     if (-not (Test-Path $edgeUpdatePath)) {
@@ -726,6 +727,8 @@ if ($webView2Installed) {
 } else {
     Write-Host "    WebView2 Runtime not found." -ForegroundColor Gray
 }
+
+Remove-EdgeShortcuts
 
 if (-not $edgeOk -or -not $webView2Ok) {
     throw 'Edge/WebView2 uninstall incomplete.'
