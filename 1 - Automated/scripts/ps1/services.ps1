@@ -128,6 +128,7 @@ function Get-ServiceStartupCatalog {
         'WerSvc'
         'WpcMonSvc'
         'WSearch'
+        'WSAIFabricSvc'
     )
 
     # ---- MANUAL ----
@@ -430,9 +431,6 @@ function Get-ServiceStartupCatalog {
         # --- Push Notifications ---
         'WpnService'      # Windows Push Notifications System Service (WNS)
 
-        # --- AI fabric ---
-        'WSAIFabricSvc'   # Windows Subsystem for AI fabric (Qualcomm NPU on ARM; no-op on x86 desktops)
-
         # --- Xbox (non-overlay) ---
         # Gaming overlay and Game Bar are disabled via registry in registry.ps1;
         # the underlying Xbox services are set to Manual rather than Disabled
@@ -498,7 +496,7 @@ function Get-ServiceStartupCatalog {
         'WpcMonSvc'                     = 'Manual'
         'WpnService'                    = 'Automatic'
         'WSearch'                       = 'Automatic'
-        'WSAIFabricSvc'                 = 'Automatic'
+        'WSAIFabricSvc'                 = 'Disabled'
         'wuauserv'                      = 'Manual'
         'camsvc'                        = 'Automatic'
         'edgeupdate'                    = 'Automatic'
@@ -681,3 +679,4 @@ if ($doSvc) {
 } else {
     Write-Host "    [NOT FOUND]  DoSvc" -ForegroundColor Gray
 }
+

@@ -18,6 +18,7 @@ $appsInfo = @{
     'Sticky Notes'                    = 'Microsoft.MicrosoftStickyNotes'
     'Windows Clock'                   = 'Microsoft.WindowsAlarms'
     'Camera'                          = 'Microsoft.WindowsCamera'
+    'Office Actions Server'           = 'Microsoft.Office.ActionsServer'
     'Microsoft Copilot'               = 'Microsoft.Copilot'
     'Cortana'                         = 'Microsoft.549981C3F5F10'
     'MSN Weather'                     = 'Microsoft.BingWeather'
@@ -36,3 +37,5 @@ Write-Host "      winget install 9NBLGGH4NNS1   (Xbox Game Bar)" -ForegroundColo
 Write-Host "      winget install 9WZDNCRFJ3PZ   (Microsoft Teams)" -ForegroundColor Gray
 Write-Host ""
 Write-Host "    For Xbox specifically, reinstall from the Xbox Store page." -ForegroundColor Gray
+Write-Host "    Deep AI packages removed by ai_debloat.ps1 do not have a supported Store reinstall flow." -ForegroundColor Gray
+Write-Host "    Use a restore point or an in-place repair if you need to fully restore AIX/CoreAI/Recall components." -ForegroundColor Gray

@@ -31,6 +31,9 @@ $paths = @(
     'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot'
     'HKLM:\SOFTWARE\Policies\Microsoft\Windows\ChatIcon'
     'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization'
+    'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai'
+    'HKCU:\Software\Policies\Microsoft\office\16.0\common\privacy'
+    'HKCU:\Software\Microsoft\VoiceAccess'
     # Additional Copilot keys
     'HKLM:\SOFTWARE\Microsoft\Windows\Shell\Copilot\BingChat'
     # Paint and Notepad AI settings
@@ -54,6 +57,12 @@ $values = @(
     @{ Path = 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsCopilot'; Name = 'AllowCopilotRuntime' }
     @{ Path = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System';           Name = 'EnableCdp'           }
     @{ Path = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI';         Name = 'DisableSettingsAgent' }
+    @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings'; Name = 'AutoOpenCopilotLargeScreens' }
+    @{ Path = 'HKCU:\Software\Microsoft\Office\16.0\Word\Options'; Name = 'EnableCopilot' }
+    @{ Path = 'HKCU:\Software\Microsoft\Office\16.0\Excel\Options'; Name = 'EnableCopilot' }
+    @{ Path = 'HKCU:\Software\Microsoft\Office\16.0\OneNote\Options\Copilot'; Name = 'CopilotEnabled' }
+    @{ Path = 'HKCU:\Software\Microsoft\Office\16.0\OneNote\Options\Copilot'; Name = 'CopilotNotebooksEnabled' }
+    @{ Path = 'HKCU:\Software\Microsoft\Office\16.0\OneNote\Options\Copilot'; Name = 'CopilotSkittleEnabled' }
     # Click to Do user-level key (HKCU shared path - remove value only)
     @{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\ClickToDo'; Name = 'DisableClickToDo' }
     # Edge AI features (shared key - remove individual values only, not the entire key)
@@ -79,4 +88,20 @@ $clsid = "{CB5571B1-A131-4C41-BFEF-57696FCE7CA2}"
 if ((Test-Path $blockedPath) -and (Get-ItemProperty -Path $blockedPath -Name $clsid -ErrorAction SilentlyContinue)) {
     Remove-ItemProperty -Path $blockedPath -Name $clsid -ErrorAction SilentlyContinue
     Write-Host "    [REMOVED]   Copilot shell extension unblocked"
+}
+
+# Remove AI components hide tokens if this pack added them
+$visibilityPath = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer'
+$currentVisibility = try { Get-ItemPropertyValue -Path $visibilityPath -Name 'SettingsPageVisibility' -ErrorAction Stop } catch { $null }
+if (-not [string]::IsNullOrWhiteSpace($currentVisibility) -and $currentVisibility -like 'hide:*') {
+    $tokens = @($currentVisibility.Substring(5) -split ';' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $filtered = @($tokens | Where-Object { $_ -notin @('aicomponents', 'appactions') })
+    if ($filtered.Count -gt 0) {
+        $newVisibility = 'hide:' + ($filtered -join ';') + ';'
+        Set-ItemProperty -Path $visibilityPath -Name 'SettingsPageVisibility' -Value $newVisibility -Type String -ErrorAction SilentlyContinue
+        Write-Host "    [RESTORED]  SettingsPageVisibility -> $newVisibility"
+    } else {
+        Remove-ItemProperty -Path $visibilityPath -Name 'SettingsPageVisibility' -ErrorAction SilentlyContinue
+        Write-Host '    [REMOVED]   SettingsPageVisibility (AI Components hide)'
+    }
 }

@@ -176,6 +176,58 @@ $policies = @{
         'AllowCopilotRuntime' = 0
     }
 
+    # ---- Office AI / Copilot features ----
+    # Disable training, connected experiences and content safety prompts used by
+    # Copilot-backed Office features.
+    'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\training\general' = @{
+        'disabletraining' = 1
+    }
+    'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\training\specific\adaptivefloatie' = @{
+        'disabletrainingofadaptivefloatie' = 1
+    }
+    'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\contentsafety\general' = @{
+        'disablecontentsafety' = 1
+    }
+    'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\contentsafety\specific\alternativetext' = @{
+        'disablecontentsafety' = 1
+    }
+    'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\contentsafety\specific\imagequestionandanswering' = @{
+        'disablecontentsafety' = 1
+    }
+    'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\contentsafety\specific\promptassistance' = @{
+        'disablecontentsafety' = 1
+    }
+    'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\contentsafety\specific\rewrite' = @{
+        'disablecontentsafety' = 1
+    }
+    'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\contentsafety\specific\summarization' = @{
+        'disablecontentsafety' = 1
+    }
+    'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\contentsafety\specific\summarizationwithreferences' = @{
+        'disablecontentsafety' = 1
+    }
+    'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\ai\contentsafety\specific\texttotable' = @{
+        'disablecontentsafety' = 1
+    }
+    'HKCU:\Software\Policies\Microsoft\office\16.0\common\privacy' = @{
+        'controllerconnectedservicesenabled' = 2
+        'usercontentdisabled'               = 2
+    }
+    'HKCU:\Software\Microsoft\Office\16.0\Word\Options' = @{
+        'EnableCopilot' = 0
+    }
+    'HKCU:\Software\Microsoft\Office\16.0\Excel\Options' = @{
+        'EnableCopilot' = 0
+    }
+    'HKCU:\Software\Microsoft\Office\16.0\OneNote\Options\Copilot' = @{
+        'CopilotEnabled'          = 0
+        'CopilotNotebooksEnabled' = 0
+        'CopilotSkittleEnabled'   = 0
+    }
+    'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings' = @{
+        'AutoOpenCopilotLargeScreens' = 0
+    }
+
     # ---- Cross-Device Resume (CDP) ----
     # EnableCdp=0: Disables the Connected Devices Platform (CDP) which powers
     # the "Cross-Device Resume" feature (24H2+). CDP allows Windows to resume
@@ -209,6 +261,40 @@ foreach ($path in $policies.Keys) {
         Write-Host "    [SET] $name = $($policies[$path][$name])  ($path)"
     }
 }
+
+# --- Voice Access ---
+$voiceAccessPath = 'HKCU:\Software\Microsoft\VoiceAccess'
+if (-not (Test-Path $voiceAccessPath)) { New-Item -Path $voiceAccessPath -Force | Out-Null }
+Set-ItemProperty -Path $voiceAccessPath -Name 'RunningState' -Value 0 -Type DWord -ErrorAction SilentlyContinue
+Set-ItemProperty -Path $voiceAccessPath -Name 'TextCorrection' -Value 1 -Type DWord -ErrorAction SilentlyContinue
+Write-Host '    [SET] Voice Access startup + correction disabled'
+
+# --- Hide AI Components page in Settings ---
+$visibilityPath = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer'
+if (-not (Test-Path $visibilityPath)) { New-Item -Path $visibilityPath -Force | Out-Null }
+$currentVisibility = try { Get-ItemPropertyValue -Path $visibilityPath -Name 'SettingsPageVisibility' -ErrorAction Stop } catch { $null }
+if ($currentVisibility -like 'showonly:*') {
+    Write-Host '    [SKIP] AI Components hide skipped because SettingsPageVisibility uses showonly:' -ForegroundColor Gray
+} else {
+    $tokens = [System.Collections.Generic.List[string]]::new()
+    if (-not [string]::IsNullOrWhiteSpace($currentVisibility) -and $currentVisibility -like 'hide:*') {
+        foreach ($token in ($currentVisibility.Substring(5) -split ';')) {
+            if (-not [string]::IsNullOrWhiteSpace($token) -and -not $tokens.Contains($token)) {
+                [void]$tokens.Add($token)
+            }
+        }
+    }
+    foreach ($token in @('aicomponents', 'appactions')) {
+        if (-not $tokens.Contains($token)) {
+            [void]$tokens.Add($token)
+        }
+    }
+    $newVisibility = 'hide:' + (($tokens | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) -join ';') + ';'
+    Set-ItemProperty -Path $visibilityPath -Name 'SettingsPageVisibility' -Value $newVisibility -Type String -ErrorAction SilentlyContinue
+    Write-Host "    [SET] SettingsPageVisibility = $newVisibility"
+}
+
+Write-Host '    [INFO] AI voice effects require device-specific registry state; only best-effort coverage is applied here.' -ForegroundColor DarkGray
 
 # Block the Copilot shell extension (registered shell handler CLSID).
 # Adding a CLSID to Shell Extensions\Blocked prevents it from loading into

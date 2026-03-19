@@ -18,6 +18,7 @@
         [7 - DNS]            -> Cloudflare DNS (user choice)
         debloat              -> UWP app removal
         privacy              -> OOSU10 + AI/Copilot/Recall + telemetry tasks + privacy registry
+        ai_debloat           -> Deep AI package / CBS / Recall cleanup + post-update hook
         timer                -> Optional SetTimerResolution startup
         network_tweaks       -> Teredo disable + TCP/Nagle/QoS
         [8 - Windows Update] -> WU profile (user choice)
@@ -683,45 +684,48 @@ Invoke-Script "$SCRIPTS\debloat.ps1"
 Write-Step 'PHASE B.6 - Privacy & AI (OOSU10, telemetry, AI/Copilot, privacy registry)'
 Invoke-Script "$SCRIPTS\privacy.ps1"
 
+Write-Step 'PHASE B.7 - AI deep debloat (AppX/CBS/Recall/update hook)'
+Invoke-Script "$SCRIPTS\ai_debloat.ps1"
+
 if ($enableTimerTool) {
-    Write-Step 'PHASE B.7 - SetTimerResolution at startup'
+    Write-Step 'PHASE B.8 - SetTimerResolution at startup'
     Invoke-Script "$SCRIPTS\timer.ps1"
 } else {
-    Write-Step 'PHASE B.7 - SetTimerResolution at startup (skipped)'
+    Write-Step 'PHASE B.8 - SetTimerResolution at startup (skipped)'
     Write-Host '    Skipped        : user chose not to install the timer tool'
     Write-Host '                     Process Lasso users can use its built-in timer resolution tool instead'
     Write-Log 'Skipped: timer.ps1 (user chose not to enable SetTimerResolution startup)' 'INFO'
 }
 
-Write-Step 'PHASE B.8 - Additional network tweaks (Teredo, TCP, Nagle, QoS)'
+Write-Step 'PHASE B.9 - Additional network tweaks (Teredo, TCP, Nagle, QoS)'
 Invoke-Script "$SCRIPTS\network_tweaks.ps1"
 
-Write-Step "PHASE B.9 - Windows Update profile: $profilLabel"
+Write-Step "PHASE B.10 - Windows Update profile: $profilLabel"
 Invoke-Script "$SCRIPTS\set_windows_update.ps1" @{ Profil = $updateProfil }
 
 if ($disableFirewall) {
-    Write-Step 'PHASE B.10 - Disable Windows Firewall profiles'
+    Write-Step 'PHASE B.11 - Disable Windows Firewall profiles'
     Invoke-Script "$SCRIPTS\firewall.ps1"
 } else {
-    Write-Step 'PHASE B.10 - Disable Windows Firewall profiles (skipped)'
+    Write-Step 'PHASE B.11 - Disable Windows Firewall profiles (skipped)'
     Write-Host '    Skipped        : user chose to keep the current firewall configuration'
     Write-Log 'Skipped: firewall.ps1 (user chose not to disable firewall profiles)' 'INFO'
 }
 
 if ($applyPersonalSettings) {
-    Write-Step 'PHASE B.11 - Personal shell settings (theme, colors, taskbar, Settings app)'
+    Write-Step 'PHASE B.12 - Personal shell settings (theme, colors, taskbar, Settings app)'
     Invoke-Script "$SCRIPTS\personal_settings.ps1"
 } else {
-    Write-Step 'PHASE B.11 - Personal shell settings (skipped)'
+    Write-Step 'PHASE B.12 - Personal shell settings (skipped)'
     Write-Host "    Skipped        : user chose not to apply the pack's subjective shell/theme preferences"
     Write-Log 'Skipped: personal_settings.ps1 (user chose not to apply personal settings)' 'INFO'
 }
 
 if ($setInterruptAffinity) {
-    Write-Step 'PHASE B.12 - GPU interrupt affinity (pin to core 2)'
+    Write-Step 'PHASE B.13 - GPU interrupt affinity (pin to core 2)'
     Invoke-Script "$SCRIPTS\set_affinity.ps1" @{ SkipReboot = $true }
 } else {
-    Write-Step 'PHASE B.12 - GPU interrupt affinity (skipped)'
+    Write-Step 'PHASE B.13 - GPU interrupt affinity (skipped)'
     Write-Host '    Skipped        : run 6 - Interrupt Affinity\set_affinity.bat after NVIDIA updates'
     Write-Log 'Skipped: set_affinity.ps1 (user opted out)' 'INFO'
 }
@@ -729,7 +733,7 @@ if ($setInterruptAffinity) {
 $msiStateApplied = $false
 if (Test-Path $msiStateFile) {
     if ($applySavedMsi) {
-        Write-Step 'PHASE B.13 - MSI interrupt mode (from saved snapshot)'
+        Write-Step 'PHASE B.14 - MSI interrupt mode (from saved snapshot)'
         $msiMeta = (Get-Content $msiStateFile -Encoding UTF8 | ConvertFrom-Json)._meta
         Write-Host "    Snapshot found: $msiStateFile" -ForegroundColor Cyan
         Write-Host "    Created: $($msiMeta.created) on $($msiMeta.machine)" -ForegroundColor DarkGray
@@ -739,13 +743,13 @@ if (Test-Path $msiStateFile) {
         Write-Log "MSI state applied from saved snapshot: $msiStateFile" 'OK'
         $msiStateApplied = $true
     } else {
-        Write-Step 'PHASE B.13 - MSI interrupt mode (skipped)'
+        Write-Step 'PHASE B.14 - MSI interrupt mode (skipped)'
         Write-Host "    Snapshot found but skipped by launch choice: $msiStateFile" -ForegroundColor Yellow
         Write-Host '    Run 3 - MSI Utils\msi_apply.bat manually if you want to replay it later.' -ForegroundColor DarkGray
         Write-Log 'Skipped: MSI apply (launch choice disabled saved MSI replay)' 'INFO'
     }
 } else {
-    Write-Step 'PHASE B.13 - MSI interrupt mode (no snapshot found)'
+    Write-Step 'PHASE B.14 - MSI interrupt mode (no snapshot found)'
     Write-Host '    No saved msi_state.json found in 3 - MSI Utils/.' -ForegroundColor DarkGray
     Write-Host '    Configure MSI manually via MSI_util_v3.exe, then run msi_snapshot.bat to save' -ForegroundColor DarkGray
     Write-Host '    your settings to 3 - MSI Utils\msi_state.json -- next time run_all.bat runs,' -ForegroundColor DarkGray
@@ -754,7 +758,7 @@ if (Test-Path $msiStateFile) {
 }
 
 if ($installNvInspector) {
-    Write-Step 'PHASE B.14 - NVIDIA Profile Inspector install'
+    Write-Step 'PHASE B.15 - NVIDIA Profile Inspector install'
     Invoke-Script "$SCRIPTS\install_nvinspector.ps1" @{ SourceRoot = $NVINSPECTOR_DIR }
 }
 
@@ -869,6 +873,7 @@ if ($defenderStep) {
         Write-Log 'Normal reboot skipped by user.' 'INFO'
     }
 }
+
 
 
 

@@ -17,6 +17,7 @@
       dns.ps1               - Restores DHCP-assigned DNS on all interfaces
       timer.ps1             - Deletes startup shortcut, terminates SetTimerResolution
       privacy.ps1           - Imports privacy_defaults.reg, removes AI/Recall/Copilot policy keys
+      ai_debloat.ps1        - Removes AI deep-debloat hooks and restores saved JSON backups
       debloat_restore.ps1   - Provides guidance for reinstalling removed UWP apps
       network_tweaks.ps1    - Re-enables Teredo (netsh teredo set state default)
       windows_update.ps1    - Restores full WU (Profile 1 = Maximum)
@@ -25,7 +26,7 @@
       restore_affinity.ps1  - Deletes or reverts GPU interrupt affinity policy
 
     Known limitations (not automatically restored):
-      - UWP apps removed by debloat.ps1 must be reinstalled manually from the Store.
+      - UWP apps removed by debloat.ps1 and ai_debloat.ps1 must be reinstalled manually from the Store.
       - Telemetry scheduled tasks disabled by privacy.ps1 must be re-enabled
         via Task Scheduler (Microsoft\Windows\Customer Experience Improvement Program etc.)
       - OOSU10 settings applied by privacy.ps1 are not individually rolled back.
@@ -149,6 +150,9 @@ Invoke-Script "$RESTORE\timer.ps1"
 Write-Step "Restore privacy & AI settings"
 Invoke-Script "$RESTORE\privacy.ps1"
 
+Write-Step "Remove AI deep-debloat hooks"
+Invoke-Script "$RESTORE\ai_debloat.ps1"
+
 Write-Step "UWP app reinstallation help"
 Invoke-Script "$RESTORE\debloat_restore.ps1"
 
@@ -217,3 +221,4 @@ if ($restart -ieq 'Y') {
 } else {
     Write-Log 'Immediate restart skipped by user.' 'INFO'
 }
+

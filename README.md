@@ -39,8 +39,8 @@ In this pack you will find tweaks for:
 
 - **Better input latency**: by adjusting the timer resolution (via SetTimerResolution or Process Lasso, depending on what you prefer), MSI interrupts, GPU IRQ affinity, mouse acceleration fix, and dynamic tick disabled in the BCD.
 - **Better system fluidity**: power throttling disabled, MMCSS high priority, USB selective suspend disabled, less background activity
-- **Debloat**: Microsoft app removal, OEM bloatware (HP/Dell/Lenovo), pre-installed third-party apps (Spotify, Netflix, TikTok, Candy Crush, Roblox...), service startup cleanup (via Autoruns, provided in /Tools/)
-- **Privacy**: 240 OOSU10 tweaks. DiagTrack, Cortana, widgets, Copilot, Recall, Click to Do, Paint/Notepad AI features, Edge AI/Copilot sidebar, and account nag notifications disabled. Start menu Recommended section hidden.
+- **Debloat**: Microsoft app removal, OEM bloatware (HP/Dell/Lenovo), pre-installed third-party apps (Spotify, Netflix, TikTok, Candy Crush, Roblox...), service startup cleanup (via Autoruns, provided in /Tools/), plus deep AI component cleanup for AIX/CoreAI/Recall where supported
+- **Privacy**: 240 OOSU10 tweaks. DiagTrack, Cortana, widgets, Copilot, Recall, Click to Do, Paint/Notepad AI features, Office AI/Copilot policies, Edge AI/Copilot sidebar, and account nag notifications disabled. Start menu Recommended section hidden.
 - **Boot**: legacy boot menu
 - **Network**: Cloudflare DNS (optional), network throttling disabled, TCP stack tuned (ECN, RSS, CUBIC, Nagle off), LSO off, QoS reservation removed
 - **Windows Update**: configurable profile: Maximum / Security only / Disabled. Security only is often the best.
@@ -140,7 +140,8 @@ Scripts executed in order:
 | `performance.ps1` | Ultimate Performance power plan + PPM Rocket (immediate max CPU frequency), BCD (dynamictick, legacy menu), USB selective suspend disabled |
 | `set_dns.ps1` | Optional Cloudflare DNS (1.1.1.1 / 1.0.0.1) |
 | `debloat.ps1` | UWP app removal: Microsoft bloatware (Teams, Copilot, Outlook, Sticky Notes...), Xbox overlay, OEM apps (HP/Dell/Lenovo), pre-installed third-party apps (Spotify, Netflix, TikTok, Candy Crush...) |
-| `privacy.ps1` | O&O ShutUp10++ (240 tweaks) + Recall, Click to Do, Copilot, Paint AI, Notepad AI, Edge AI/sidebar disabled + telemetry scheduled tasks + PS7 telemetry + Brave policies + privacy registry tweaks |
+| `privacy.ps1` | O&O ShutUp10++ (240 tweaks) + Recall, Click to Do, Copilot, Office AI policies, Paint AI, Notepad AI, Edge AI/sidebar disabled + telemetry scheduled tasks + PS7 telemetry + Brave policies + privacy registry tweaks |
+| `ai_debloat.ps1` | Deep AI cleanup: advanced AI AppX removal, Recall optional feature removal, CBS package cleanup, anti-reinstall CAB install, region policy patch, and post-update cleanup task |
 | `timer.ps1` | Optional SetTimerResolution at startup (~0.5 ms), installs VC++ x64 runtime if missing |
 | `network_tweaks.ps1` | Teredo disabled, TCP stack (ECN, RSC off, heuristics off), LSO disabled on active adapters, Nagle disabled per Ethernet interface, QoS bandwidth reservation removed, MaxUserPort extended |
 | `set_windows_update.ps1` | Windows Update profile (Maximum / Security / Disabled) |
@@ -336,6 +337,7 @@ Restores in order:
 - DNS (back to DHCP)
 - SetTimerResolution (startup shortcut removed)
 - Privacy & AI (privacy registry defaults + AI/Recall/Copilot policy keys removed)
+- AI deep debloat hooks (post-update cleanup task removed, saved JSON/Game Bar backups restored, custom anti-reinstall CAB removed when possible)
 - UWP app reinstallation help (`debloat_restore.ps1` provides Store/winget commands)
 - Network tweaks (Teredo, TCP stack, LSO, Nagle, QoS restored to Windows defaults)
 - Windows Update (restored to Maximum / Windows default)
@@ -343,6 +345,8 @@ Restores in order:
 - Personal shell/theme settings (restored to Windows defaults)
 - GPU interrupt affinity (Affinity Policy keys removed or restored to pre-tweak state)
 - Optional reinstall prompt for Microsoft Edge + WebView2 Runtime / OneDrive
+
+Deep AI removals done by `ai_debloat.ps1` are intentionally aggressive. AppX/CBS/file cleanup is not fully reversible by `restore_all.bat`; keep the restore point if you may want those Windows AI components back.
 
 ## Project structure
 
