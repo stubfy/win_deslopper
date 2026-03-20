@@ -158,9 +158,10 @@ function Set-StickyKeysDefaultOff {
 
 function Set-VisualEffectsPreset {
     # Applies a curated visual effects preset:
-    # - Animations that convey no information (menu/tooltip fade, shadows) are disabled.
-    # - Animations that aid spatial awareness (drag full windows, font smoothing,
-    #   client area animation for scroll/expand) are kept enabled.
+    # - Non-essential animations (menu/tooltip fade, shadows, client area animation)
+    #   are disabled.
+    # - Visual clarity settings that improve usability (drag full windows, font
+    #   smoothing) are kept enabled.
     # - Minimize/maximize animations (window collapsing to taskbar) are disabled
     #   via both registry (MinAnimate=0 in tweaks_consolidated.reg) and SPI_SETANIMATION.
 
@@ -174,7 +175,7 @@ function Set-VisualEffectsPreset {
     New-ItemProperty -Path $desktop -Name FontSmoothing -PropertyType String -Value '2' -Force | Out-Null
     New-ItemProperty -Path $metrics -Name MinAnimate -PropertyType String -Value '0' -Force | Out-Null
 
-    Invoke-SpiPvBool -Action $SPI_SETCLIENTAREAANIMATION -Enabled $true -Label 'Visual Effects: animate controls and elements inside windows = on'
+    Invoke-SpiPvBool -Action $SPI_SETCLIENTAREAANIMATION -Enabled $false -Label 'Visual Effects: animate controls and elements inside windows = off'
     Invoke-SpiPvBool -Action $SPI_SETMENUANIMATION -Enabled $false -Label 'Visual Effects: fade or slide menus into view = off'
     Invoke-SpiPvBool -Action $SPI_SETTOOLTIPANIMATION -Enabled $false -Label 'Visual Effects: fade or slide ToolTips into view = off'
     Invoke-SpiPvBool -Action $SPI_SETSELECTIONFADE -Enabled $false -Label 'Visual Effects: fade out menu items after clicking = off'
