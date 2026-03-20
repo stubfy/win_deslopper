@@ -54,6 +54,7 @@ if ($gpu.FriendlyName -notmatch 'NVIDIA') {
 }
 
 if ($SourceRoot -eq '') { $SourceRoot = Split-Path $PSScriptRoot -Parent }
+$SourceRoot = $SourceRoot.Trim().Trim('"')
 $sourceDir = Get-ChildItem -Path $SourceRoot -Directory -ErrorAction SilentlyContinue |
     Where-Object { Test-Path (Join-Path $_.FullName 'NVPI-R.exe') } |
     Sort-Object Name -Descending |
@@ -67,6 +68,7 @@ if (-not $sourceDir) {
 $installRoot = Join-Path $env:APPDATA 'win_desloperf'
 $installDir  = Join-Path $installRoot 'NVInspector'
 $exePath     = Join-Path $installDir 'NVPI-R.exe'
+$profileDir  = Join-Path $installDir 'base-settings'
 $desktopDir  = [System.Environment]::GetFolderPath('Desktop')
 $shortcutPath = Join-Path $desktopDir 'NVIDIA Profile Inspector.lnk'
 
@@ -97,12 +99,17 @@ if (-not (Test-Path $exePath)) {
     return
 }
 
+if (-not (Test-Path $profileDir)) {
+    $profileDir = $installDir
+}
+
 $wsh = New-Object -ComObject WScript.Shell
 $shortcut = $wsh.CreateShortcut($shortcutPath)
 $shortcut.TargetPath       = $exePath
-$shortcut.WorkingDirectory = $installDir
+$shortcut.WorkingDirectory = $profileDir
 $shortcut.Description      = 'NVIDIA Profile Inspector - win_desloperf'
 $shortcut.IconLocation     = "$exePath,0"
 $shortcut.Save()
 
 Write-Host "    Shortcut      : $shortcutPath"
+Write-Host "    Profile start : $profileDir"
