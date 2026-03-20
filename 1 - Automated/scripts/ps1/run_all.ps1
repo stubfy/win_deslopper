@@ -14,7 +14,7 @@
       Phase B - Tweaks in dependency order:
         registry             -> consolidated reg file + visual effects + MarkC mouse fix
         services             -> startup type alignment
-        performance          -> Ultimate Performance plan + BCD + USB selective suspend
+        performance          -> Bitsum / Ultimate Performance plan + BCD + USB selective suspend
         [7 - DNS]            -> Cloudflare DNS (user choice)
         debloat              -> UWP app removal
         privacy              -> OOSU10 + AI/Copilot/Recall + telemetry tasks + privacy registry

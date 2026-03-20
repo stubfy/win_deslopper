@@ -21,9 +21,11 @@ Write-Host "    Hibernation re-enabled."
 powercfg -setactive 381b4222-f694-41f0-9685-ff5bb260df2e 2>&1 | Out-Null
 Write-Host "    Balanced plan activated (381b4222-f694-41f0-9685-ff5bb260df2e)"
 
-# Note about the created Ultimate Performance plan (not automatically deleted)
-Write-Host "    Note: the created 'Ultimate Performance' plan remains available in power options." -ForegroundColor Gray
-Write-Host "    Delete it manually if desired: powercfg -delete <GUID>" -ForegroundColor Gray
+# Note: the Bitsum Highest Performance plan (5a39c962-...) is kept available in
+# power options after restore. Duplicate "Ultimate Performance" plans were already
+# cleaned up by performance.ps1 during the original run.
+Write-Host "    Note: Bitsum Highest Performance plan (5a39c962-...) remains available in power options." -ForegroundColor Gray
+Write-Host "    Delete it manually if desired: powercfg -delete 5a39c962-8fb2-4c72-8843-936f1d325503" -ForegroundColor Gray
 
 # === SECTION: Restore USB selective suspend ===
 

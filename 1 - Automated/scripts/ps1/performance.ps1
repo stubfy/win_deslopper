@@ -2,10 +2,18 @@
 # Combines: power.ps1, bcdedit.ps1, usb.ps1
 #
 # Power plan strategy:
-#   Windows ships with a hidden "Ultimate Performance" plan (GUID ending in ...eb61)
-#   that disables all CPU idle states (C-states), sets minimum processor frequency
-#   to 100% and removes every power-saving behavior that could introduce latency.
-#   This script duplicates it (creating a new named instance) and activates it.
+#   Bitsum Highest Performance (GUID: 5a39c962-8fb2-4c72-8843-936f1d325503) is
+#   imported from the bundled .pow file if not already present. It sets CPU min/max
+#   to 100%, disables USB selective suspend, PCI Express ASPM, and hard disk timeout.
+#   Using a fixed GUID avoids the duplicate-plan accumulation caused by
+#   -duplicatescheme (which generates a new random GUID on every run).
+#
+#   Fallback: if the import fails, duplicates the built-in Ultimate Performance plan
+#   (GUID ending in ...eb61) as a last resort.
+#
+#   Cleanup: after activating the plan, any duplicate "Ultimate Performance" plans
+#   (created by previous runs) are deleted. Built-in plans (Balanced, High Performance,
+#   Power Saver, Ultimate Performance hidden source) are never touched.
 #
 # PPM setting - Processor Performance Increase Policy (Bitsum "Rocket"):
 #   Subgroup: Processor power management (54533251-82be-4824-96c1-47b60b740d00)
@@ -15,6 +23,7 @@
 #   CPU frequency when it detects a demand spike. The default "Ideal" policy ramps
 #   up gradually; "Rocket" jumps to maximum frequency immediately, eliminating the
 #   latency of the ramp-up period during burst workloads (frame start, physics step).
+#   Applied on top of the Bitsum plan (it does not include Rocket by default).
 #
 # BCD:
 #   disabledynamictick: Forces a constant TSC-based tick at the full requested
@@ -29,18 +38,56 @@
 #
 # Rollback: restore\performance.ps1
 
-# === SECTION: Ultimate Performance power plan ===
+# === SECTION: Bitsum Highest Performance power plan ===
 
-# Duplicate the Ultimate Performance plan (built-in, fixed GUID)
-$dupOutput = powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2>&1 | Out-String
-$planGuid  = [regex]::Match($dupOutput, '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}').Value
+$BITSUM_GUID    = '5a39c962-8fb2-4c72-8843-936f1d325503'
+$UP_SOURCE_GUID = 'e9a42b02-d5df-448d-aa00-03f14749eb61'  # hidden built-in Ultimate Performance
+# Built-in plans that must never be deleted (fixed Windows GUIDs)
+$BUILTIN_GUIDS  = @(
+    '381b4222-f694-41f0-9685-ff5bb260df2e'  # Balanced
+    '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c'  # High Performance
+    'a1841308-3541-4fab-bc81-f71556f20b4a'  # Power Saver
+    'e9a42b02-d5df-448d-aa00-03f14749eb61'  # Ultimate Performance (hidden source)
+    $BITSUM_GUID                             # Bitsum Highest Performance (keep)
+)
 
-if (-not $planGuid) {
-    Write-Host "    WARNING: unable to create Ultimate Performance plan." -ForegroundColor Yellow
-    Write-Host "    Active plan unchanged. Apply manually if needed."
-    # Apply the Bitsum parameter to the current active plan anyway
-    $activeLine = powercfg -getactivescheme 2>&1 | Out-String
-    $planGuid   = [regex]::Match($activeLine, '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}').Value
+$planGuid = $null
+
+# Check if Bitsum plan already exists
+$listOutput = powercfg -list 2>&1 | Out-String
+if ($listOutput -match $BITSUM_GUID) {
+    $planGuid = $BITSUM_GUID
+    Write-Host "    Bitsum Highest Performance plan already present: $planGuid"
+} else {
+    # Import from bundled .pow file
+    $powFile = Join-Path $ROOT 'tools\bitsum_highest_performance.pow'
+    if (Test-Path $powFile) {
+        powercfg -import $powFile $BITSUM_GUID 2>&1 | Out-Null
+        # Verify import succeeded
+        $listOutput = powercfg -list 2>&1 | Out-String
+        if ($listOutput -match $BITSUM_GUID) {
+            $planGuid = $BITSUM_GUID
+            Write-Host "    Bitsum Highest Performance plan imported: $planGuid"
+        } else {
+            Write-Host "    WARNING: Bitsum import failed, falling back to Ultimate Performance duplicate." -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "    WARNING: bitsum_highest_performance.pow not found at $powFile, falling back." -ForegroundColor Yellow
+    }
+
+    # Fallback: duplicate built-in Ultimate Performance plan
+    if (-not $planGuid) {
+        $dupOutput = powercfg -duplicatescheme $UP_SOURCE_GUID 2>&1 | Out-String
+        $planGuid  = [regex]::Match($dupOutput, '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}').Value
+        if ($planGuid) {
+            Write-Host "    Fallback: Ultimate Performance duplicate created: $planGuid"
+        } else {
+            # Last resort: apply to current active plan
+            Write-Host "    WARNING: unable to create any performance plan." -ForegroundColor Yellow
+            $activeLine = powercfg -getactivescheme 2>&1 | Out-String
+            $planGuid   = [regex]::Match($activeLine, '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}').Value
+        }
+    }
 }
 
 if ($planGuid) {
@@ -50,6 +97,7 @@ if ($planGuid) {
 
     # Processor Performance Increase Policy = 5000 (Rocket: immediate max frequency)
     # Subgroup: Processor power management | Setting: Increase policy
+    # Applied on top of the Bitsum plan (Bitsum does not bundle this setting)
     powercfg /setacvalueindex $planGuid `
         54533251-82be-4824-96c1-47b60b740d00 `
         4d2b0152-7d5c-498b-88e2-34345392a2c5 `
@@ -66,6 +114,18 @@ if ($planGuid) {
     # Also set via registry (HibernateEnabled=0 in tweaks_consolidated.reg).
     powercfg -h off 2>&1 | Out-Null
     Write-Host "    Hibernation disabled (hiberfil.sys removed)"
+
+    # Cleanup: delete all "Ultimate Performance" duplicate plans left by previous runs.
+    # Safe guard: never delete built-in plans ($BUILTIN_GUIDS) or the current active plan.
+    $cleanupList = powercfg -list 2>&1 | Out-String
+    $cleanupMatches = [regex]::Matches($cleanupList, '([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s+\(Ultimate Performance\)')
+    foreach ($m in $cleanupMatches) {
+        $g = $m.Groups[1].Value
+        if ($BUILTIN_GUIDS -notcontains $g) {
+            powercfg -delete $g 2>&1 | Out-Null
+            Write-Host "    Deleted duplicate Ultimate Performance plan: $g"
+        }
+    }
 } else {
     Write-Host "    ERROR: unable to determine active plan GUID." -ForegroundColor Red
 }
