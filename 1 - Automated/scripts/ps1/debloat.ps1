@@ -189,6 +189,36 @@ function Get-AppxRemovalTargets {
 
     return @($script:packageCache | Where-Object { $_.Name -eq $AppName -and -not $_.IsBundle })
 }
+function Hide-StartExperiencesInstalledAppsEntry {
+    $paths = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+        'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
+    )
+
+    $entries = @(Get-ItemProperty -Path $paths -ErrorAction SilentlyContinue | Where-Object {
+        $displayName = [string]$_.DisplayName
+        $childName = [string]$_.PSChildName
+        $displayName -like 'Start Experiences App*' -or
+        $childName -like '*StartMenuExperienceHost*' -or
+        $childName -like '*StartExperiences*'
+    })
+
+    if ($entries.Count -eq 0) {
+        Write-Host '    [INFO]    Start Experiences App uninstall entry not found' -ForegroundColor DarkGray
+        return
+    }
+
+    foreach ($entry in $entries) {
+        try {
+            Set-ItemProperty -Path $entry.PSPath -Name 'SystemComponent' -Value 1 -Type DWord -Force -ErrorAction Stop
+            Set-ItemProperty -Path $entry.PSPath -Name 'NoDisplayIcon' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+            Write-Host "    [HIDE]    $($entry.DisplayName) -> Installed apps entry hidden"
+        } catch {
+            Write-Host "    [WARN]    Failed to hide Installed apps entry for $($entry.DisplayName): $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    }
+}
 
 # Upfront cache: single queries for all installed and provisioned packages.
 # Avoids repeated WMI/DISM calls that are slow on large package sets.
@@ -255,5 +285,7 @@ foreach ($appName in $appsToRemove) {
         }
     }
 }
+
+Hide-StartExperiencesInstalledAppsEntry
 
 Write-Host "    Summary: $removedPackages installed package(s) removed, $removedProvisioned provisioned package(s) removed, $skippedNonRemovable non-removable package(s) skipped, $errors error(s), $notFound app id(s) not found"

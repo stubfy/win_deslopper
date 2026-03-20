@@ -262,7 +262,30 @@ foreach ($path in $policies.Keys) {
     }
 }
 
-# --- Voice Access ---
+
+# --- Refresh Paint app settings so AI/Copilot policy is re-read ---
+$paintPackageRoot = Join-Path $env:LOCALAPPDATA 'Packages\Microsoft.Paint_8wekyb3d8bbwe'
+$paintSettingsDir = Join-Path $paintPackageRoot 'Settings'
+$paintStateNames = @('settings.dat', 'settings.dat.LOG1', 'settings.dat.LOG2', 'roaming.lock')
+$paintStateReset = $false
+
+Get-Process -Name 'mspaint' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+
+if (Test-Path -LiteralPath $paintSettingsDir) {
+    foreach ($name in $paintStateNames) {
+        $target = Join-Path $paintSettingsDir $name
+        if (Test-Path -LiteralPath $target) {
+            Remove-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue
+            $paintStateReset = $true
+        }
+    }
+}
+
+if ($paintStateReset) {
+    Write-Host '    [SET] Paint app settings reset so AI policy is re-read on next launch'
+} else {
+    Write-Host '    [INFO] Paint app settings not found; reset skipped' -ForegroundColor DarkGray
+}# --- Voice Access ---
 $voiceAccessPath = 'HKCU:\Software\Microsoft\VoiceAccess'
 if (-not (Test-Path $voiceAccessPath)) { New-Item -Path $voiceAccessPath -Force | Out-Null }
 Set-ItemProperty -Path $voiceAccessPath -Name 'RunningState' -Value 0 -Type DWord -ErrorAction SilentlyContinue
