@@ -154,7 +154,7 @@ function Get-EdgePresenceEvidence {
     }
 
     foreach ($root in $edgeUpdateRoots) {
-        if (Test-Path $root) {
+        if (Test-Path (Join-Path $root 'MicrosoftEdgeUpdate.exe')) {
             $evidence.Add("update files under $root")
         }
     }
@@ -565,10 +565,14 @@ function Uninstall-WebView2 {
         }
 
         Write-Host "    Launching WebView2 uninstall..."
-        $proc = Invoke-InstallerCommand -CommandLine $commandLine
-        $webView2ExitCodes.Add([int]$proc.ExitCode)
-        Write-Host "    Exit code      : $($proc.ExitCode)"
-        & shutdown.exe /a 2>$null
+        try {
+            $proc = Invoke-InstallerCommand -CommandLine $commandLine
+            $webView2ExitCodes.Add([int]$proc.ExitCode)
+            Write-Host "    Exit code      : $($proc.ExitCode)"
+            & shutdown.exe /a 2>$null
+        } catch {
+            Write-Host "    [WARNING] WebView2 uninstall hit an error: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
     }
 
     if (Test-WebView2Installed) {
