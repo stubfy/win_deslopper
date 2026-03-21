@@ -65,13 +65,27 @@ if (-not $sourceDir) {
     return
 }
 
-$installRoot = Join-Path $env:APPDATA 'win_desloperf'
-$installDir  = Join-Path $installRoot 'NVInspector'
-$exePath     = Join-Path $installDir 'NVPI-R.exe'
-$profileDir  = Join-Path $installDir 'base-settings'
-$desktopDir  = [System.Environment]::GetFolderPath('Desktop')
+$installRoot  = Join-Path $env:APPDATA 'win_desloperf'
+$installDir   = Join-Path $installRoot 'NVInspector'
+$exePath      = Join-Path $installDir 'NVPI-R.exe'
+$desktopDir   = [System.Environment]::GetFolderPath('Desktop')
 $shortcutPath = Join-Path $desktopDir 'NVIDIA Profile Inspector.lnk'
+$markerFile   = Join-Path $installDir '.pack-version'
+$packVersion  = $sourceDir.Name
 
+# --- Version check ---
+$isInstalled      = Test-Path $exePath
+$installedVersion = $null
+if ($isInstalled -and (Test-Path $markerFile)) {
+    $installedVersion = (Get-Content -LiteralPath $markerFile -First 1).Trim()
+}
+
+if ($isInstalled -and $installedVersion -eq $packVersion) {
+    Write-Host "    Already up to date : $packVersion"
+    return
+}
+
+# --- Install / Upgrade ---
 if (-not (Test-Path $installDir)) {
     New-Item -ItemType Directory -Path $installDir -Force | Out-Null
 }
@@ -82,16 +96,18 @@ if ($running) {
     Write-Host "    Stopped running NVPI-R instance"
 }
 
+if ($isInstalled) {
+    Write-Host "    Updating       : $installedVersion -> $packVersion"
+} else {
+    Write-Host "    Installing     : $packVersion"
+}
+
 Copy-Item -Path (Join-Path $sourceDir.FullName '*') -Destination $installDir -Recurse -Force
-Write-Host "    Source        : $($sourceDir.FullName)"
-Write-Host "    Installed to  : $installDir"
+Write-Host "    Source         : $($sourceDir.FullName)"
+Write-Host "    Installed to   : $installDir"
 
 Get-ChildItem -Path $installDir -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
-    try {
-        Unblock-File -Path $_.FullName -ErrorAction Stop
-    } catch {
-        # Best effort: continue if no zone identifier stream is present.
-    }
+    try { Unblock-File -Path $_.FullName -ErrorAction Stop } catch {}
 }
 
 if (-not (Test-Path $exePath)) {
@@ -99,17 +115,21 @@ if (-not (Test-Path $exePath)) {
     return
 }
 
-if (-not (Test-Path $profileDir)) {
-    $profileDir = $installDir
+# Write version marker
+Set-Content -LiteralPath $markerFile -Value $packVersion -NoNewline -Force
+
+# --- Shortcut (fresh install only) ---
+if (-not $isInstalled) {
+    $profileDir = Join-Path $installDir 'base-settings'
+    if (-not (Test-Path $profileDir)) { $profileDir = $installDir }
+
+    $wsh = New-Object -ComObject WScript.Shell
+    $shortcut = $wsh.CreateShortcut($shortcutPath)
+    $shortcut.TargetPath       = $exePath
+    $shortcut.WorkingDirectory = $profileDir
+    $shortcut.Description      = 'NVIDIA Profile Inspector - win_desloperf'
+    $shortcut.IconLocation     = "$exePath,0"
+    $shortcut.Save()
+
+    Write-Host "    Shortcut       : $shortcutPath"
 }
-
-$wsh = New-Object -ComObject WScript.Shell
-$shortcut = $wsh.CreateShortcut($shortcutPath)
-$shortcut.TargetPath       = $exePath
-$shortcut.WorkingDirectory = $profileDir
-$shortcut.Description      = 'NVIDIA Profile Inspector - win_desloperf'
-$shortcut.IconLocation     = "$exePath,0"
-$shortcut.Save()
-
-Write-Host "    Shortcut      : $shortcutPath"
-Write-Host "    Profile start : $profileDir"
