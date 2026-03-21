@@ -54,7 +54,7 @@ function Get-PackVersion {
         }
     }
 
-    return 'v0.9'
+    return 'v1.0'
 }
 
 $PACK_VERSION = Get-PackVersion -PackRoot $PACK_ROOT
