@@ -13,10 +13,12 @@
 param(
     [switch]$CheckOnly,
     [int]$TimeoutSec = 20,
+    [int]$DownloadTimeoutSec = 120,
     [string]$RootPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 $ROOT = if (-not [string]::IsNullOrWhiteSpace($RootPath)) { (Get-Item $RootPath).FullName } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $REPO = 'stubfy/win_desloperf'
 $VERSION_FILE = Join-Path $ROOT 'pack-version.txt'
@@ -71,6 +73,7 @@ function Get-WebRequestParams {
 
 function Get-WebDownloadParams {
     $params = Get-WebRequestParams
+    $params.TimeoutSec = $DownloadTimeoutSec
 
     if ($PSVersionTable.PSVersion.Major -lt 6) {
         $params.UseBasicParsing = $true
@@ -171,29 +174,35 @@ function Get-RemoteTags {
     return $semverTags | Sort-Object Major, Minor, Patch -Unique
 }
 
-function Get-ReleaseInfo {
-    param([string]$Tag)
-
+function Get-AllReleases {
+    # 1 seul appel API pour toutes les releases. Retourne une hashtable tag -> info.
+    $releaseMap = @{}
     try {
-        $release = Invoke-GitHubJson -Url "https://api.github.com/repos/$REPO/releases/tags/$Tag"
-        [pscustomobject]@{
-            Tag         = $Tag
-            PublishedAt = if ($release.published_at) { ([datetime]$release.published_at).ToString('yyyy-MM-dd') } else { $null }
-            Body        = [string]$release.body
+        $releases = Invoke-GitHubJson -Url "https://api.github.com/repos/$REPO/releases?per_page=100"
+        foreach ($release in $releases) {
+            $key = ([string]$release.tag_name).ToLowerInvariant()
+            if (-not $releaseMap.ContainsKey($key)) {
+                $releaseMap[$key] = [pscustomobject]@{
+                    Tag         = [string]$release.tag_name
+                    PublishedAt = if ($release.published_at) {
+                                      ([datetime]$release.published_at).ToString('yyyy-MM-dd')
+                                  } else { $null }
+                    Body        = [string]$release.body
+                }
+            }
         }
     }
     catch {
-        $response = $_.Exception.Response
-        if ($response -and [int]$response.StatusCode -eq 404) {
-            return $null
-        }
-
-        throw
+        Write-Warn "Could not load release notes: $($_.Exception.Message)"
     }
+    return $releaseMap
 }
 
 function Show-Changelog {
-    param([object[]]$Tags)
+    param(
+        [object[]]$Tags,
+        [hashtable]$ReleaseMap
+    )
 
     if (-not $Tags -or $Tags.Count -eq 0) {
         return
@@ -204,7 +213,7 @@ function Show-Changelog {
     Write-Host ''
 
     foreach ($tag in $Tags) {
-        $releaseInfo = Get-ReleaseInfo -Tag $tag.Name
+        $releaseInfo = if ($ReleaseMap) { $ReleaseMap[($tag.Name).ToLowerInvariant()] } else { $null }
         $dateSuffix = if ($releaseInfo -and $releaseInfo.PublishedAt) { " - $($releaseInfo.PublishedAt)" } else { '' }
         Write-Host "  [$($tag.Name)]$dateSuffix" -ForegroundColor White
 
@@ -246,7 +255,7 @@ function Write-HelperScript {
 param(
     [string]$PackRoot,
     [string]$ExpandedRoot,
-    [string]$BackupRoot,
+    [string]$BackupName,
     [int]$ParentPid,
     [string]$TempRoot
 )
@@ -321,6 +330,9 @@ function Copy-PreservedFiles {
 
 $movedOldPack = $false
 $movedNewPack = $false
+$movedBackup  = $false
+$stagingPath  = Join-Path $TempRoot 'old_pack_staging'
+$BackupRoot   = $null
 
 try {
     Write-Host ''
@@ -337,17 +349,18 @@ try {
         throw "Expanded update folder not found: $ExpandedRoot"
     }
 
-    if (Test-Path $BackupRoot) {
-        throw "Backup path already exists: $BackupRoot"
-    }
-
-    Write-Stage "Backup       : $BackupRoot"
-    Move-Item -LiteralPath $PackRoot -Destination $BackupRoot
+    Write-Stage 'Staging old pack...'
+    Move-Item -LiteralPath $PackRoot -Destination $stagingPath
     $movedOldPack = $true
 
     Write-Stage "Install path : $PackRoot"
     Move-Item -LiteralPath $ExpandedRoot -Destination $PackRoot
     $movedNewPack = $true
+
+    $BackupRoot = Join-Path $PackRoot $BackupName
+    Write-Stage "Backup       : $BackupRoot"
+    Move-Item -LiteralPath $stagingPath -Destination $BackupRoot
+    $movedBackup = $true
 
     Write-Stage 'Preserving local backup and MSI state files...'
     Copy-PreservedFiles
@@ -358,22 +371,20 @@ try {
     Write-Stage "Backup kept  : $BackupRoot"
     Write-Host ''
 
-    try {
-        Start-Process -FilePath explorer.exe -ArgumentList $PackRoot | Out-Null
-    } catch {
-        Write-StageWarn "Could not open Explorer automatically: $($_.Exception.Message)"
-    }
 }
 catch {
     Write-Host ''
     Write-Host "  Update failed: $($_.Exception.Message)" -ForegroundColor Red
 
-    if ($movedOldPack -and (Test-Path $BackupRoot)) {
+    $restoreSource = if (Test-Path $stagingPath) { $stagingPath }
+                     elseif ($movedBackup -and (Test-Path $BackupRoot)) { $BackupRoot }
+                     else { $null }
+
+    if ($movedOldPack -and $restoreSource) {
         if (Test-Path $PackRoot) {
             Remove-Item -LiteralPath $PackRoot -Recurse -Force -ErrorAction SilentlyContinue
         }
-
-        Move-Item -LiteralPath $BackupRoot -Destination $PackRoot
+        Move-Item -LiteralPath $restoreSource -Destination $PackRoot
         Write-StageWarn 'Original pack restored.'
     }
 
@@ -467,13 +478,8 @@ if ($status -eq 'CURRENT' -or $status -eq 'AHEAD') {
 }
 
 if ($tagsForChangelog.Count -gt 0) {
-    try {
-        Show-Changelog -Tags $tagsForChangelog
-    }
-    catch {
-        Write-Warn "Could not load changelog: $($_.Exception.Message)"
-        Write-Host ''
-    }
+    $releaseMap = Get-AllReleases
+    Show-Changelog -Tags $tagsForChangelog -ReleaseMap $releaseMap
 }
 
 if ($CheckOnly) {
@@ -481,8 +487,8 @@ if ($CheckOnly) {
     exit 0
 }
 
-$answer = Read-Host "  Update this folder to $($latestTag.Name)? (Y/N) [default: N]"
-if ($answer -notin @('Y', 'y')) {
+$answer = Read-Host "  Update this folder to $($latestTag.Name)? (Y/N) [default: Y]"
+if ($answer -notin @('Y', 'y', '')) {
     Write-Info 'Cancelled.'
     Write-Host ''
     exit 0
@@ -502,28 +508,25 @@ try {
     Invoke-GitHubDownload -Url "https://github.com/$REPO/archive/refs/tags/$($latestTag.Name).zip" -OutFile $zipPath
 
     Write-Note 'Extracting   : archive contents'
-    Expand-Archive -LiteralPath $zipPath -DestinationPath $extractPath -Force
+    if (Test-Path $extractPath) { Remove-Item -LiteralPath $extractPath -Recurse -Force }
+    try {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $extractPath)
+    }
+    catch {
+        Expand-Archive -LiteralPath $zipPath -DestinationPath $extractPath -Force
+    }
 
     $expandedRoot = Get-ChildItem -Path $extractPath -Directory -ErrorAction Stop | Select-Object -First 1
     if (-not $expandedRoot) {
         throw 'The downloaded archive did not contain a pack folder.'
     }
 
-    $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-    $backupRoot = Join-Path (Split-Path $ROOT -Parent) ("{0}.backup-{1}-{2}" -f (Split-Path $ROOT -Leaf), (Get-SafeVersionLabel -Version $localVersion), $timestamp)
+    $backupName = "backup-{0}" -f (Get-SafeVersionLabel -Version $localVersion)
 
     Write-HelperScript -HelperPath $helperPath -TempRoot $tempRoot
 
-    $helperArgs = @(
-        '-NoProfile',
-        '-ExecutionPolicy', 'Bypass',
-        '-File', $helperPath,
-        '-PackRoot', $ROOT,
-        '-ExpandedRoot', $expandedRoot.FullName,
-        '-BackupRoot', $backupRoot,
-        '-ParentPid', $PID,
-        '-TempRoot', $tempRoot
-    )
+    $helperArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$helperPath`" -PackRoot `"$ROOT`" -ExpandedRoot `"$($expandedRoot.FullName)`" -BackupName `"$backupName`" -ParentPid $PID -TempRoot `"$tempRoot`""
 
     Start-Process -FilePath 'powershell.exe' -ArgumentList $helperArgs -WorkingDirectory $env:TEMP | Out-Null
 
