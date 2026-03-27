@@ -136,6 +136,13 @@ if ($config) {
         Write-Host "    Device  : $($g.label)"
         Write-Host "    Core    : $($g.core)"
 
+        $applyThis = Read-Host "  Apply $($g.type.ToUpper()) affinity? (Y/N) [default: Y]"
+        if ($applyThis -ne '' -and $applyThis -inotmatch '^y') {
+            Write-Host "    $($g.type.ToUpper()) affinity skipped." -ForegroundColor Gray
+            Write-Host ""
+            continue
+        }
+
         $chain = Get-PciChainFromDevice -InstanceId $g.instanceId -StartLabel $startLabel
         if ($chain.Count -eq 0) {
             Write-Host "    [WARN] Could not walk PCI chain. Skipping." -ForegroundColor Yellow
@@ -165,38 +172,43 @@ if ($config) {
 
     # GPU section ---------------------------------------------------------------
     Write-Host "  -- GPU interrupt affinity --" -ForegroundColor Cyan
-    $gpu = Find-DiscreteGpu
-
-    if (-not $gpu) {
-        Write-Host "    [ERROR] No PCI display device found. Is the GPU driver installed?" -ForegroundColor Red
+    $applyGpu = Read-Host "  Apply GPU affinity? (Y/N) [default: Y]"
+    if ($applyGpu -ne '' -and $applyGpu -inotmatch '^y') {
+        Write-Host "    GPU affinity skipped." -ForegroundColor Gray
     } else {
-        Write-Host "    Detected : $($gpu.FriendlyName)"
+        $gpu = Find-DiscreteGpu
 
-        $gpuCoreInput = Read-Host "    Pin GPU chain to core [0-$($coreCount - 1)] (default: 2)"
-        $gpuCore = if ($gpuCoreInput -match '^\d+$' -and [int]$gpuCoreInput -lt $coreCount) {
-            [int]$gpuCoreInput
-        } else { 2 }
-
-        $gpuChain = Get-PciChainFromDevice -InstanceId $gpu.InstanceId -StartLabel 'GPU'
-        if ($gpuChain.Count -eq 0) {
-            Write-Host "    [WARN] Could not walk PCI chain for GPU." -ForegroundColor Yellow
+        if (-not $gpu) {
+            Write-Host "    [ERROR] No PCI display device found. Is the GPU driver installed?" -ForegroundColor Red
         } else {
-            Write-Host ""
-            Write-Host "    PCI chain ($($gpuChain.Count) device(s)):"
-            for ($i = 0; $i -lt $gpuChain.Count; $i++) {
-                $devObj = if ($gpuChain[$i].DevObj) { "  DevObj: $($gpuChain[$i].DevObj)" } else { '' }
-                Write-Host ("      [{0}] {1,-14} : {2}{3}" -f ($i + 1), $gpuChain[$i].Label, $gpuChain[$i].Id, $devObj)
-            }
-            Write-Host ""
-            $ok = Write-AffinityPolicy -Chain $gpuChain -Core $gpuCore
-            $color = if ($ok -eq $gpuChain.Count) { 'Green' } else { 'Yellow' }
-            Write-Host "    $ok/$($gpuChain.Count) devices pinned to core $gpuCore." -ForegroundColor $color
+            Write-Host "    Detected : $($gpu.FriendlyName)"
 
-            $groups += @{
-                type       = 'gpu'
-                core       = $gpuCore
-                label      = $gpu.FriendlyName
-                instanceId = $gpu.InstanceId
+            $gpuCoreInput = Read-Host "    Pin GPU chain to core [0-$($coreCount - 1)] (default: 2)"
+            $gpuCore = if ($gpuCoreInput -match '^\d+$' -and [int]$gpuCoreInput -lt $coreCount) {
+                [int]$gpuCoreInput
+            } else { 2 }
+
+            $gpuChain = Get-PciChainFromDevice -InstanceId $gpu.InstanceId -StartLabel 'GPU'
+            if ($gpuChain.Count -eq 0) {
+                Write-Host "    [WARN] Could not walk PCI chain for GPU." -ForegroundColor Yellow
+            } else {
+                Write-Host ""
+                Write-Host "    PCI chain ($($gpuChain.Count) device(s)):"
+                for ($i = 0; $i -lt $gpuChain.Count; $i++) {
+                    $devObj = if ($gpuChain[$i].DevObj) { "  DevObj: $($gpuChain[$i].DevObj)" } else { '' }
+                    Write-Host ("      [{0}] {1,-14} : {2}{3}" -f ($i + 1), $gpuChain[$i].Label, $gpuChain[$i].Id, $devObj)
+                }
+                Write-Host ""
+                $ok = Write-AffinityPolicy -Chain $gpuChain -Core $gpuCore
+                $color = if ($ok -eq $gpuChain.Count) { 'Green' } else { 'Yellow' }
+                Write-Host "    $ok/$($gpuChain.Count) devices pinned to core $gpuCore." -ForegroundColor $color
+
+                $groups += @{
+                    type       = 'gpu'
+                    core       = $gpuCore
+                    label      = $gpu.FriendlyName
+                    instanceId = $gpu.InstanceId
+                }
             }
         }
     }
@@ -205,6 +217,10 @@ if ($config) {
 
     # Mouse section -------------------------------------------------------------
     Write-Host "  -- Mouse interrupt affinity --" -ForegroundColor Cyan
+    $applyMouse = Read-Host "  Apply mouse affinity? (Y/N) [default: Y]"
+    if ($applyMouse -ne '' -and $applyMouse -inotmatch '^y') {
+        Write-Host "    Mouse affinity skipped." -ForegroundColor Gray
+    } else {
     $usbMice = Find-UsbMice
 
     if ($usbMice.Count -eq 0) {
@@ -273,6 +289,7 @@ if ($config) {
             }
         }
     }
+    } # end apply mouse
 
     # Save config ---------------------------------------------------------------
     Write-Host ""
