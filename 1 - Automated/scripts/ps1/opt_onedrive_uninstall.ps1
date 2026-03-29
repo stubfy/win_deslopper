@@ -12,8 +12,10 @@
 #      and the temp folder used during setup).
 #   4. Delete OneDrive registry keys (HKCU and HKLM).
 #   5. Remove the OneDrive startup entry from HKCU\Run.
-#   6. Remove the OneDrive namespace extension from the Explorer navigation pane
-#      by setting System.IsPinnedToNameSpaceTree=0 for the OneDrive CLSID.
+#   6. Remove OneDrive from the Explorer navigation pane:
+#      - Set System.IsPinnedToNameSpaceTree=0 for both OneDrive CLSIDs (all builds)
+#      - Delete Desktop\NameSpace entries from HKCU and HKLM (persistent pins)
+#      - Unpin the OneDrive folder from Quick Access via Shell.Application COM
 #   7. Apply DisableFileSyncNGSC=1 policy to block reinstallation by Windows.
 #      Note: this policy is also set in privacy_tweaks.reg as a baseline.
 #
@@ -77,14 +79,59 @@ $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 Remove-ItemProperty -Path $runKey -Name 'OneDrive' -ErrorAction SilentlyContinue
 
 # Remove OneDrive from File Explorer navigation pane
-$clsids = @(
-    'HKCR:\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}'
-    'HKCR:\Wow6432Node\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}'
+# Two CLSIDs: {018D5C66} = OneDrive Personal (all builds), {A52BBA46} = post-21H2 builds
+$onedriveCLSIDs = @(
+    '{018D5C66-4533-4307-9B53-224DE2ED1FE6}'
+    '{A52BBA46-E9E1-435f-B3D9-28DAA648C0F6}'
 )
-foreach ($path in $clsids) {
-    if (Test-Path $path) {
-        Set-ItemProperty -Path $path -Name 'System.IsPinnedToNameSpaceTree' -Value 0 -Type DWord -ErrorAction SilentlyContinue
+
+# Mount HKCR if not already available as a PSDrive
+if (-not (Get-PSDrive -Name HKCR -ErrorAction SilentlyContinue)) {
+    New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT -ErrorAction SilentlyContinue | Out-Null
+}
+
+# Hide via IsPinnedToNameSpaceTree (HKCR — affects all users)
+foreach ($clsid in $onedriveCLSIDs) {
+    foreach ($root in @('HKCR:\CLSID', 'HKCR:\Wow6432Node\CLSID')) {
+        $path = "$root\$clsid"
+        if (Test-Path $path) {
+            Set-ItemProperty -Path $path -Name 'System.IsPinnedToNameSpaceTree' -Value 0 -Type DWord -ErrorAction SilentlyContinue
+        }
     }
+}
+
+# Remove Desktop\NameSpace entries (HKCU = per-user, HKLM = machine-wide)
+# These are the actual registration keys that add entries to the nav pane.
+# Removing them is more reliable than IsPinnedToNameSpaceTree alone.
+$namespaceRoots = @(
+    'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace'
+    'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace'
+    'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace'
+)
+foreach ($root in $namespaceRoots) {
+    foreach ($clsid in $onedriveCLSIDs) {
+        $full = Join-Path $root $clsid
+        if (Test-Path $full) {
+            Remove-Item $full -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Host "    [REMOVED] $full"
+        }
+    }
+}
+
+# Unpin OneDrive folder from Quick Access (pinned items survive uninstall on some builds)
+try {
+    $shell = New-Object -ComObject Shell.Application
+    $qa = $shell.Namespace("shell:::{679F85CB-0220-4080-B29B-5540CC05AAB6}")
+    if ($qa) {
+        foreach ($item in @($qa.Items())) {
+            if ($item.Path -like "*OneDrive*") {
+                $item.InvokeVerb("unpinfromhome")
+                Write-Host "    [UNPINNED] Quick Access: $($item.Path)"
+            }
+        }
+    }
+} catch {
+    Write-Host "    [SKIP] Quick Access unpin: $($_.Exception.Message)"
 }
 
 # Prevent automatic reinstallation by Windows
