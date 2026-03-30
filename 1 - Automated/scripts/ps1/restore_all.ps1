@@ -180,13 +180,13 @@ Write-Log 'Reminder: telemetry scheduled tasks are not restored automatically.' 
 
 # Conditional Edge / OneDrive options
 Write-Host ""
-$restoreEdge = Read-Host "Reinstall Microsoft Edge + WebView2 Runtime? (Y/N)"
-Write-Log "Prompt: Reinstall Edge + WebView2 = $restoreEdge" 'INFO'
+$restoreEdge = Read-Host "Reinstall Microsoft Edge? (Y/N)"
+Write-Log "Prompt: Reinstall Edge = $restoreEdge" 'INFO'
 if ($restoreEdge -ieq 'Y') {
-    Write-Step "OPTION - Reinstall Microsoft Edge + WebView2 Runtime"
+    Write-Step "OPTION - Reinstall Microsoft Edge"
     Invoke-Script "$RESTORE\opt_edge_restore.ps1"
 } else {
-    Write-Log 'Skipped: opt_edge_restore.ps1 (user chose not to reinstall Edge + WebView2)' 'INFO'
+    Write-Log 'Skipped: opt_edge_restore.ps1 (user chose not to reinstall Edge)' 'INFO'
 }
 
 $restoreOneDrive = Read-Host "Reinstall OneDrive? (Y/N)"

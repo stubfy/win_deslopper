@@ -253,6 +253,7 @@ function Get-RunAllDefaultOptions {
         defenderStep          = $true
         updateProfile         = '2'
         uninstallEdge         = $true
+        removeWebView2        = $false
         uninstallOneDrive     = $true
         disableFirewall       = $true
         configureDns          = $true
@@ -317,6 +318,7 @@ function Load-RunAllOptions {
     $boolKeys = @(
         'defenderStep',
         'uninstallEdge',
+        'removeWebView2',
         'uninstallOneDrive',
         'disableFirewall',
         'configureDns',
@@ -367,6 +369,7 @@ function Save-RunAllOptions {
         defenderStep          = [bool]$Options['defenderStep']
         updateProfile         = [string]$Options['updateProfile']
         uninstallEdge         = [bool]$Options['uninstallEdge']
+        removeWebView2        = [bool]$Options['removeWebView2']
         uninstallOneDrive     = [bool]$Options['uninstallOneDrive']
         disableFirewall       = [bool]$Options['disableFirewall']
         configureDns          = [bool]$Options['configureDns']
@@ -436,7 +439,8 @@ function Show-LaunchOptionsSummary {
 
     Write-LaunchOptionsSummaryLine -Label 'Defender Safe Mode step' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['defenderStep']))
     Write-LaunchOptionsSummaryLine -Label 'Windows Update profile' -Value (Get-UpdateProfileLabel -Profile $Options['updateProfile'])
-    Write-LaunchOptionsSummaryLine -Label 'Uninstall Edge + WebView2' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['uninstallEdge']))
+    Write-LaunchOptionsSummaryLine -Label 'Uninstall Edge' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['uninstallEdge']))
+    Write-LaunchOptionsSummaryLine -Label 'Remove WebView2 Runtime' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['removeWebView2']))
     Write-LaunchOptionsSummaryLine -Label 'Uninstall OneDrive' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['uninstallOneDrive']))
     Write-LaunchOptionsSummaryLine -Label 'Disable Firewall' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['disableFirewall']))
     Write-LaunchOptionsSummaryLine -Label 'Apply Cloudflare DNS' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['configureDns']))
@@ -529,7 +533,8 @@ function Show-LaunchOptionsFallback {
 
     $Options['defenderStep'] = Read-BooleanChoice -Prompt 'Run Defender Safe Mode step at the end?' -Default ([bool]$Options['defenderStep'])
     $Options['updateProfile'] = Read-UpdateProfileChoice -Default $Options['updateProfile']
-    $Options['uninstallEdge'] = Read-BooleanChoice -Prompt 'Uninstall Microsoft Edge + WebView2?' -Default ([bool]$Options['uninstallEdge'])
+    $Options['uninstallEdge'] = Read-BooleanChoice -Prompt 'Uninstall Microsoft Edge (WebView2 preserved)?' -Default ([bool]$Options['uninstallEdge'])
+    $Options['removeWebView2'] = Read-BooleanChoice -Prompt 'Remove WebView2 Runtime? (may break Start menu search)' -Default ([bool]$Options['removeWebView2'])
     $Options['uninstallOneDrive'] = Read-BooleanChoice -Prompt 'Uninstall OneDrive?' -Default ([bool]$Options['uninstallOneDrive'])
     $Options['disableFirewall'] = Read-BooleanChoice -Prompt 'Disable Windows Firewall profiles?' -Default ([bool]$Options['disableFirewall'])
     $Options['configureDns'] = Read-BooleanChoice -Prompt 'Apply Cloudflare DNS?' -Default ([bool]$Options['configureDns'])
@@ -568,7 +573,8 @@ function Write-SelectedOptionsLog {
 
     Write-Log "Option selected: Defender Safe Mode step = $([bool]$Options['defenderStep'])" 'INFO'
     Write-Log "Option selected: Windows Update profile = $(Get-UpdateProfileLabel -Profile $Options['updateProfile'])" 'INFO'
-    Write-Log "Option selected: Edge + WebView2 uninstall = $([bool]$Options['uninstallEdge'])" 'INFO'
+    Write-Log "Option selected: Edge uninstall = $([bool]$Options['uninstallEdge'])" 'INFO'
+    Write-Log "Option selected: WebView2 removal = $([bool]$Options['removeWebView2'])" 'INFO'
     Write-Log "Option selected: OneDrive uninstall = $([bool]$Options['uninstallOneDrive'])" 'INFO'
     Write-Log "Option selected: Firewall disable = $([bool]$Options['disableFirewall'])" 'INFO'
     Write-Log "Option selected: Cloudflare DNS = $([bool]$Options['configureDns'])" 'INFO'
@@ -646,6 +652,7 @@ $defenderStep          = [bool]$launchOptions['defenderStep']
 $updateProfil          = [string]$launchOptions['updateProfile']
 $profilLabel           = Get-UpdateProfileLabel -Profile $updateProfil
 $uninstallEdge         = [bool]$launchOptions['uninstallEdge']
+$removeWebView2        = [bool]$launchOptions['removeWebView2']
 $uninstallOneDrive     = [bool]$launchOptions['uninstallOneDrive']
 $disableFirewall       = [bool]$launchOptions['disableFirewall']
 $configureDns          = [bool]$launchOptions['configureDns']
@@ -787,8 +794,15 @@ if ($uninstallOneDrive) {
 }
 
 if ($uninstallEdge) {
-    Write-Step 'OPTION - Microsoft Edge + WebView2 Runtime uninstall'
+    Write-Step 'OPTION - Microsoft Edge uninstall (WebView2 preserved)'
     Invoke-Script "$SCRIPTS\opt_edge_uninstall.ps1"
+}
+
+if ($removeWebView2) {
+    Write-Step 'OPTION - WebView2 Runtime removal (may break Start menu search)'
+    Invoke-Script "$SCRIPTS\opt_webview2_uninstall.ps1"
+} else {
+    Write-Log 'Skipped: opt_webview2_uninstall.ps1 (default off — preserves Start menu search)' 'INFO'
 }
 
 Write-Step 'PHASE C - Recap (what actually changed vs before)'
