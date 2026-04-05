@@ -1,6 +1,6 @@
-# restore\windows_update.ps1 - Restore Windows Update to maximum mode (pack baseline)
+# restore\windows_update.ps1 - Restore Windows Update to default mode (WinUtil baseline)
 
-Write-Host "    Restoring Windows Update -> maximum mode (baseline)..."
+Write-Host "    Restoring Windows Update -> default mode (WinUtil baseline)..."
 
 $PACK_ROOT = Split-Path (Split-Path (Split-Path $PSScriptRoot))
 $WU_STEP   = Join-Path $PACK_ROOT "1 - Automated\scripts\ps1\set_windows_update.ps1"

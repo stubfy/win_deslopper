@@ -238,8 +238,8 @@ function Get-UpdateProfileLabel {
     param([string]$Profile)
 
     return @{
-        '1' = 'Maximum'
-        '2' = 'Security only'
+        '1' = 'Default'
+        '2' = 'Security'
         '3' = 'Disabled'
     }[$Profile]
 }
@@ -443,7 +443,7 @@ function Show-LaunchOptionsSummary {
 
     Write-LaunchOptionsSummaryLine -Label 'Defender Safe Mode step' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['defenderStep']))
     Write-LaunchOptionsSummaryLine -Label 'Windows Update profile' -Value (Get-UpdateProfileLabel -Profile $Options['updateProfile'])
-    Write-LaunchOptionsSummaryLine -Label 'Uninstall Edge' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['uninstallEdge']))
+    Write-LaunchOptionsSummaryLine -Label 'Remove Microsoft Edge' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['uninstallEdge']))
     Write-LaunchOptionsSummaryLine -Label 'Remove WebView2 Runtime' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['removeWebView2']))
     Write-LaunchOptionsSummaryLine -Label 'Uninstall OneDrive' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['uninstallOneDrive']))
     Write-LaunchOptionsSummaryLine -Label 'Disable Firewall' -Value (Get-OptionSummaryBoolText -Value ([bool]$Options['disableFirewall']))
@@ -497,9 +497,9 @@ function Read-UpdateProfileChoice {
     param([string]$Default)
 
     Write-Host '  WINDOWS UPDATE PROFILE:' -ForegroundColor White
-    Write-Host '    [1] Maximum  - All updates (security, quality, drivers, feature updates)' -ForegroundColor Green
-    Write-Host '    [2] Security - Security/quality updates only, no feature updates or drivers' -ForegroundColor Yellow
-    Write-Host '    [3] Disable  - Completely disable Windows Update' -ForegroundColor Red
+    Write-Host '    [1] Default   - Restore WinUtil out-of-box Windows Update settings' -ForegroundColor Green
+    Write-Host '    [2] Security  - WinUtil recommended profile (365-day feature deferral, 4-day quality deferral)' -ForegroundColor Yellow
+    Write-Host '    [3] Disabled  - Completely disable Windows Update' -ForegroundColor Red
     Write-Host ''
 
     while ($true) {
@@ -538,7 +538,7 @@ function Show-LaunchOptionsFallback {
 
     $Options['defenderStep'] = Read-BooleanChoice -Prompt 'Run Defender Safe Mode step at the end?' -Default ([bool]$Options['defenderStep'])
     $Options['updateProfile'] = Read-UpdateProfileChoice -Default $Options['updateProfile']
-    $Options['uninstallEdge'] = Read-BooleanChoice -Prompt 'Uninstall Microsoft Edge (WebView2 preserved)?' -Default ([bool]$Options['uninstallEdge'])
+    $Options['uninstallEdge'] = Read-BooleanChoice -Prompt 'Remove Microsoft Edge (WinUtil flow, WebView2 preserved)?' -Default ([bool]$Options['uninstallEdge'])
     $Options['removeWebView2'] = Read-BooleanChoice -Prompt 'Remove WebView2 Runtime? (may break Start menu search)' -Default ([bool]$Options['removeWebView2'])
     $Options['uninstallOneDrive'] = Read-BooleanChoice -Prompt 'Uninstall OneDrive?' -Default ([bool]$Options['uninstallOneDrive'])
     $Options['disableFirewall'] = Read-BooleanChoice -Prompt 'Disable Windows Firewall profiles?' -Default ([bool]$Options['disableFirewall'])
@@ -579,7 +579,7 @@ function Write-SelectedOptionsLog {
 
     Write-Log "Option selected: Defender Safe Mode step = $([bool]$Options['defenderStep'])" 'INFO'
     Write-Log "Option selected: Windows Update profile = $(Get-UpdateProfileLabel -Profile $Options['updateProfile'])" 'INFO'
-    Write-Log "Option selected: Edge uninstall = $([bool]$Options['uninstallEdge'])" 'INFO'
+    Write-Log "Option selected: Remove Microsoft Edge = $([bool]$Options['uninstallEdge'])" 'INFO'
     Write-Log "Option selected: WebView2 removal = $([bool]$Options['removeWebView2'])" 'INFO'
     Write-Log "Option selected: OneDrive uninstall = $([bool]$Options['uninstallOneDrive'])" 'INFO'
     Write-Log "Option selected: Firewall disable = $([bool]$Options['disableFirewall'])" 'INFO'
@@ -805,7 +805,7 @@ if ($uninstallOneDrive) {
 }
 
 if ($uninstallEdge) {
-    Write-Step 'OPTION - Microsoft Edge uninstall (WebView2 preserved)'
+    Write-Step 'OPTION - Remove Microsoft Edge (WinUtil flow, WebView2 preserved)'
     Invoke-Script "$SCRIPTS\opt_edge_uninstall.ps1"
 }
 
@@ -917,11 +917,4 @@ if ($defenderStep) {
         Write-Log 'Normal reboot skipped by user.' 'INFO'
     }
 }
-
-
-
-
-
-
-
 

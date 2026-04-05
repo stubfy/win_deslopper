@@ -45,7 +45,7 @@ The pack contains tweaks for:
 - **Debloat**: Microsoft app and AI removal, OEM bloatware (HP/Dell/Lenovo), pre-installed third-party apps (Spotify, Netflix, TikTok, Candy Crush, Roblox...), services (~180 services via built-in catalog)
 - **Privacy**: OOSU10. DiagTrack, Cortana, widgets, Click to Do, Brave policies (if Brave is installed), and account nag notifications disabled. Start menu Recommended section hidden.
 - **Network**: Cloudflare DNS (optional), network throttling disabled, TCP stack tuned (ECN, RSS, CUBIC, Nagle off), LSO off, QoS reservation removed
-- **Windows Update**: configurable profile: Maximum / Security only / Disabled. Security only is often the best.
+- **Windows Update**: configurable profile: Default / Security / Disabled. Security is often the best.
 - **Personal settings**: a dedicated optional script groups subjective theme/taskbar/Explorer/Settings preferences separately
 
 ---
@@ -145,8 +145,8 @@ Before anything runs, `run_all.bat` shows a summary of the current optional choi
 | # | Choice | Default |
 |---|--------|---------|
 | 1 | Defender Safe Mode step (reboot into Safe Mode after run to disable Defender) | Yes |
-| 2 | Windows Update profile (1 = Maximum, 2 = Security only, 3 = Disabled) | 2 |
-| 3 | Uninstall Edge | Yes |
+| 2 | Windows Update profile (1 = Default, 2 = Security, 3 = Disabled) | 2 |
+| 3 | Remove Microsoft Edge | Yes |
 | 4 | Remove WebView2 Runtime (may break Start menu search on some machines) | No |
 | 5 | Uninstall OneDrive | Yes |
 | 6 | Disable Windows Firewall | Yes |
@@ -206,14 +206,14 @@ Scripts executed by run_all:
 | `timer.ps1` | Optional SetTimerResolution at startup (~0.5 ms), installs VC++ x64 runtime if missing |
 | `network_tweaks.ps1` | Teredo disabled, TCP stack (ECN, RSC off, heuristics off), LSO disabled on active adapters, Nagle disabled per Ethernet interface, QoS bandwidth reservation removed, MaxUserPort extended |
 | `usb_power.ps1` | USB device power management disabled on all connected USB/HID devices (PnpCapabilities, WakeEnabled, SelectiveSuspend) |
-| `set_windows_update.ps1` | Windows Update profile (Maximum / Security / Disabled) |
+| `set_windows_update.ps1` | Windows Update profile (Default / Security / Disabled) |
 | `firewall.ps1` | Windows Firewall profiles disabled |
 | `personal_settings.ps1` | Optional personal shell/theme preferences (dark mode, accents, taskbar clock seconds, taskbar End task, Explorer presentation, Settings Home hidden) |
 | `set_affinity.ps1` | GPU interrupt chain pinned to core 2 (GPU, PCI Bridge, Root Complex) |
 | `msi_apply.ps1` | Applies `3 - MSI Utils/msi_state.json` if the file exists |
 | `install_nvinspector.ps1` | only on NVIDIA systems, copies NVInspector bundle to `%APPDATA%\win_desloperf\NVInspector` and creates a Desktop shortcut |
 | `opt_onedrive_uninstall.ps1` | Optional — full OneDrive removal |
-| `opt_edge_uninstall.ps1` | Optional — full Edge removal (WebView2 Runtime preserved) |
+| `opt_edge_uninstall.ps1` | Optional — Remove Microsoft Edge via the WinUtil uninstall flow (WebView2 Runtime preserved) |
 | `opt_webview2_uninstall.ps1` | Optional — WebView2 Runtime removal (default OFF — may break Start menu search on some machines; fix: `Tools/fix_webview2.bat`) |
 | `show_diff.ps1` | Post-tweak diff: compares current system state against `snapshot_latest.json`, categorizes results as "already OK", "applied", or "failed" |
 
@@ -231,11 +231,12 @@ Scripts executed by run_all:
 
 `set_windows_update.ps1` can also be run standalone at any time:
 
-
-Profile 2 also sets `NoAutoRebootWithLoggedOnUsers=1` (Windows will not reboot to apply an update while you are logged in) and disables the "Get latest updates as soon as they're available" toggle that bypasses the normal update schedule.
+- `1 = Default` restores the WinUtil out-of-box Windows Update configuration.
+- `2 = Security` applies the WinUtil recommended profile: drivers via Windows Update disabled, feature updates deferred 365 days, quality updates deferred 4 days, and automatic restart with logged-on users disabled.
+- `3 = Disabled` turns Windows Update off entirely and should only be used knowingly.
+- `1 - Automated\restore\windows_update.bat` reapplies profile 1 (`Default`).
 
 ### Registry tweaks applied
-
 - GameDVR / GameBar disabled + ms-gamebar / ms-gamebarservices URL protocol redirect (silences focus-stealing popups after GameBar removal)
 - MMCSS: GPU Priority 8, Priority 6, Scheduling Category High
 - Power throttling disabled (`PowerThrottlingOff=1`)
@@ -400,7 +401,7 @@ Restores in order:
 - AI deep debloat backups (saved JSON/Game Bar backups restored where available)
 - UWP app reinstallation help (`debloat_restore.ps1` provides Store/winget commands)
 - Network tweaks (Teredo, TCP stack, LSO, Nagle, QoS restored to Windows defaults)
-- Windows Update (restored to Maximum / Windows default)
+- Windows Update (restored to Default / WinUtil baseline)
 - Windows Firewall profiles (restored to saved state or Windows default)
 - Personal shell/theme settings (restored to Windows defaults)
 - GPU interrupt affinity (Affinity Policy keys removed or restored to pre-tweak state)
