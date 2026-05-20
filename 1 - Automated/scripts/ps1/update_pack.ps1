@@ -12,6 +12,8 @@
 
 param(
     [switch]$CheckOnly,
+    [switch]$AssumeYes,
+    [int]$ParentPidForHandoff = 0,
     [int]$TimeoutSec = 20,
     [int]$DownloadTimeoutSec = 120,
     [string]$RootPath = ''
@@ -484,14 +486,23 @@ if ($tagsForChangelog.Count -gt 0) {
 
 if ($CheckOnly) {
     Write-Host ''
+    if ($status -eq 'UPDATE') {
+        exit 20
+    }
+
     exit 0
 }
 
-$answer = Read-Host "  Update this folder to $($latestTag.Name)? (Y/N) [default: Y]"
-if ($answer -notin @('Y', 'y', '')) {
-    Write-Info 'Cancelled.'
-    Write-Host ''
-    exit 0
+if (-not $AssumeYes) {
+    $answer = Read-Host "  Update this folder to $($latestTag.Name)? (Y/N) [default: Y]"
+    if ($answer -notin @('Y', 'y', '')) {
+        Write-Info 'Cancelled.'
+        Write-Host ''
+        exit 0
+    }
+}
+else {
+    Write-Info 'Update confirmed by run_all.'
 }
 
 $tempRoot = Join-Path $env:TEMP ("win_desloperf-update-" + [guid]::NewGuid().ToString('N'))
@@ -526,7 +537,8 @@ try {
 
     Write-HelperScript -HelperPath $helperPath -TempRoot $tempRoot
 
-    $helperArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$helperPath`" -PackRoot `"$ROOT`" -ExpandedRoot `"$($expandedRoot.FullName)`" -BackupName `"$backupName`" -ParentPid $PID -TempRoot `"$tempRoot`""
+    $handoffParentPid = if ($ParentPidForHandoff -gt 0) { $ParentPidForHandoff } else { $PID }
+    $helperArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$helperPath`" -PackRoot `"$ROOT`" -ExpandedRoot `"$($expandedRoot.FullName)`" -BackupName `"$backupName`" -ParentPid $handoffParentPid -TempRoot `"$tempRoot`""
 
     Start-Process -FilePath 'powershell.exe' -ArgumentList $helperArgs -WorkingDirectory $env:TEMP | Out-Null
 

@@ -127,6 +127,97 @@ function Unblock-PackLaunchFiles {
 
 Unblock-PackLaunchFiles -RootPath $PACK_ROOT
 
+function Invoke-PackUpdatePreflight {
+    param(
+        [string]$PackRoot,
+        [string]$ScriptsRoot
+    )
+
+    $updaterPath = Join-Path $ScriptsRoot 'update_pack.ps1'
+    if (-not (Test-Path $updaterPath)) {
+        Write-Host '  WARN: Pack updater not found. Continuing with the current pack.' -ForegroundColor Yellow
+        Write-Log "Pack update preflight skipped; updater not found at $updaterPath" 'WARN'
+        return $false
+    }
+
+    Write-Host '  Checking for pack updates...' -ForegroundColor DarkGray
+    Write-Log 'Checking for pack updates before launch.' 'INFO'
+
+    $checkOutput = @()
+    $exitCode = 0
+
+    try {
+        Unblock-LaunchFile -Path $updaterPath
+        $checkOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $updaterPath -CheckOnly -RootPath $PackRoot 2>&1
+        $exitCode = $LASTEXITCODE
+    } catch {
+        Write-Host '  WARN: Could not check for pack updates. Continuing with the current pack.' -ForegroundColor Yellow
+        Write-Host "        $($_.Exception.Message)" -ForegroundColor DarkGray
+        Write-Log ("Pack update preflight failed: {0}" -f $_.Exception.Message) 'WARN'
+        return $false
+    }
+
+    if ($exitCode -eq 20) {
+        Write-Host ''
+        foreach ($line in $checkOutput) {
+            if ($null -ne $line -and "$line".Trim().Length -gt 0) {
+                Write-Host "$line"
+            }
+        }
+
+        $answer = Read-Host '  Update the pack before running tweaks? (Y/N) [default: Y]'
+        if ($answer -notin @('Y', 'y', '')) {
+            Write-Host '  Continuing with the current pack.' -ForegroundColor Yellow
+            Write-Log 'Pack update available; user chose to continue without updating.' 'WARN'
+            return $false
+        }
+
+        Write-Host ''
+        Write-Host '  Starting the pack update. The tweaks will not run until you launch run_all again.' -ForegroundColor Yellow
+        Write-Log 'Pack update available; user chose to update before launch.' 'INFO'
+
+        try {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $updaterPath -AssumeYes -ParentPidForHandoff $PID -RootPath $PackRoot
+            $updateExitCode = $LASTEXITCODE
+        } catch {
+            Write-Host '  ERROR: Pack update failed to start.' -ForegroundColor Red
+            Write-Host "         $($_.Exception.Message)" -ForegroundColor Yellow
+            Write-Log ("Pack update failed to start: {0}" -f $_.Exception.Message) 'ERROR'
+            return $false
+        }
+
+        if ($updateExitCode -eq 10) {
+            Write-Log 'Pack update handoff started; stopping run_all before tweaks.' 'INFO'
+            return $true
+        }
+
+        if ($updateExitCode -ne 0) {
+            Write-Host ''
+            Write-Host "  WARN: Pack updater exited with code $updateExitCode. Continuing with the current pack." -ForegroundColor Yellow
+            Write-Log "Pack updater exited with code $updateExitCode; continuing current run." 'WARN'
+            return $false
+        }
+
+        Write-Log 'Pack updater finished without handoff; stopping run_all before tweaks.' 'INFO'
+        return $true
+    }
+
+    if ($exitCode -ne 0) {
+        Write-Host '  WARN: Pack update check failed. Continuing with the current pack.' -ForegroundColor Yellow
+        foreach ($line in $checkOutput) {
+            if ($null -ne $line -and "$line".Trim().Length -gt 0) {
+                Write-Host "        $line" -ForegroundColor DarkGray
+            }
+        }
+        Write-Log "Pack update check exited with code $exitCode; continuing current run." 'WARN'
+        return $false
+    }
+
+    Write-Host '  Pack is up to date.' -ForegroundColor Green
+    Write-Log 'Pack update preflight complete; current pack is up to date.' 'INFO'
+    return $false
+}
+
 function Invoke-Script {
     param([string]$Path, [hashtable]$Params = @{})
     $name = Split-Path $Path -Leaf
@@ -617,6 +708,12 @@ Write-Log "Log    : $LOG_FILE" 'INFO'
 Write-Log '============================================================'
 Write-Host "  Log: $LOG_FILE" -ForegroundColor DarkGray
 Write-Host ''
+
+if (Invoke-PackUpdatePreflight -PackRoot $PACK_ROOT -ScriptsRoot $SCRIPTS) {
+    Write-Host ''
+    Write-Host '  Update started. Relaunch run_all.bat after the update completes.' -ForegroundColor Yellow
+    return
+}
 
 $nvInspectorBaseDir  = Join-Path $env:APPDATA 'win_desloperf'
 $nvInspectorExe      = Join-Path $nvInspectorBaseDir 'NVInspector\NVPI-R.exe'

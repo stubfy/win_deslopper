@@ -1,6 +1,6 @@
 # win_desloperf
 
-![Version](https://img.shields.io/badge/version-1.2-blue)
+![Version](https://img.shields.io/badge/version-1.3-blue)
 ![Windows](https://img.shields.io/badge/Windows_11-25H2-0078D4?logo=windows)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-5391FE?logo=powershell)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -134,7 +134,9 @@ Score: 9 810 → 10 131 **(+3.3%)** · Graphics: 98.10 → 101.31 FPS **(+3.3%)*
 1 - Automated/run_all.bat   (double-click, UAC prompt is automatic)
 ```
 
-Before anything runs, `run_all.bat` shows a summary of the current optional choices.
+Before any tweaks run, `run_all.bat` checks whether a newer pack release is available. If it finds one, it asks whether you want to update first; pressing Enter accepts the update. Once the update starts, launch `run_all.bat` again from the updated folder.
+
+After that check, `run_all.bat` shows a summary of the current optional choices.
 - if `1 - Automated/backup/run_all_options.json` exists, the last validated choices are loaded, otherwise the built-in defaults are shown.
 - answer **Y** to `Run like this?` to launch immediately with those optional choices
 - answer **N** to review the same optional choices one by one through sequential prompts
@@ -183,6 +185,8 @@ The updater:
 - reads your current local pack version
 - checks the latest GitHub tag for `stubfy/win_desloperf`
 - updates the pack **in place** so the folder path stays the same
+
+`run_all.bat` uses the same updater check before showing the launch menu, so a stale pack can be updated before any tweaks are applied.
 
 ---
 
